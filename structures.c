@@ -5,6 +5,11 @@ struct Graph consturct_graph(char * filename)
     return 0;
 }
 
+int get_avrage_out_deg(struct graph * g)
+{
+    return 0;
+}
+
 struct queue construct_queue()
 {
     return 0;

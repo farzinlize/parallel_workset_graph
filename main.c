@@ -1,66 +1,15 @@
 #include "structures.h"
-
-
-void one_bfs_B_QU(struct graph * g, struct queue * workset, int level)
-{
-    for (int i = 0; i < workset->size; i++) {
-        int node = workset->items[i];
-        for (int neighbour = g->edge_vector[node]; neighbour < g->edge_vector[node+1]; neighbour_id++) {
-            if (g->node_level_vector[neighbour] > level+1) {
-                g->node_level_vector[neighbour] = level + 1;
-                queue_push(workset, neighbour);
-            }
-        }
-    }
-}
-
-void one_bfs_B_BM(struct graph * g, char * bitmap, int level)
-{
-    for (int i = 0; i < workset->size; i++) {
-        int node = workset->items[i];
-        for (int neighbour = g->edge_vector[node]; neighbour < g->edge_vector[node+1]; neighbour_id++) {
-            if (g->node_level_vector[neighbour] > level+1) {
-                g->node_level_vector[neighbour] = level + 1;
-                queue_push(workset, neighbour);
-            }
-        }
-    }
-}
-
-void one_bfs_T_QU(struct graph * g, struct queue * workset, int level)
-{
-    for (int i = 0; i < workset->size; i++) {
-        int node = workset->items[i];
-        for (int neighbour = g->edge_vector[node]; neighbour < g->edge_vector[node+1]; neighbour_id++) {
-            if (g->node_level_vector[neighbour] > level+1) {
-                g->node_level_vector[neighbour] = level + 1;
-                queue_push(workset, neighbour);
-            }
-        }
-    }
-}
-
-void one_bfs_T_BM(struct graph * g, struct queue * workset, int level)
-{
-    for (int i = 0; i < workset->size; i++) {
-        int node = workset->items[i];
-        for (int neighbour = g->edge_vector[node]; neighbour < g->edge_vector[node+1]; neighbour_id++) {
-            if (g->node_level_vector[neighbour] > level+1) {
-                g->node_level_vector[neighbour] = level + 1;
-                queue_push(workset, neighbour);
-            }
-        }
-    }
-}
+#include "desicion_maker.h"
 
 void run_bfs(struct graph * g)
 {
-    struct queue * workset = (workset *) malloc(sizeof(queue));
+    double avrage_outdeg = get_avrage_out_deg(g);
+    struct queue * workset = (struct queue *) malloc(sizeof(struct queue));
     g->node_level_vector[0] = 0;
     queue_push(workset, 0);
     int level = 0;
     while (workset->size != 0) {
-        int algo = decide();
+        int algo = decide(avrage_outdeg, workset->size);
         if (algo == B_QU) {
             one_bfs_B_QU(g, workset, level++);
         } else if (algo == B_BM) {

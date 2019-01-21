@@ -11,17 +11,17 @@ struct graph
     int * node_distance_vector;
     int * edge_vector;
     int size;
-}
+};
 
 struct graph consturct_graph(char * filename);
-
+int get_avrage_out_deg(struct graph * g);
 
 /* ### QUEUE ### */
 struct queue
 {
     int * items;
     int size;
-}
+};
 
 struct queue construct_queue();
 int queue_push(int item);

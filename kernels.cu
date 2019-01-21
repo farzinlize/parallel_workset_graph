@@ -1,6 +1,5 @@
 #include "structures.h"
 
-
 __global__ void one_bfs_B_QU(struct graph * g, struct queue * workset, int level)
 {
     for (int i = 0; i < workset->size; i++) {
