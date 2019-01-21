@@ -1,16 +1,16 @@
 #include "structures.h"
 
-struct graph consturct_graph(char * filename)
+struct graph * consturct_graph(char * filename)
 {
     return 0;
 }
 
-int get_avrage_out_deg(struct graph * g)
+int get_average_out_deg(struct graph * g)
 {
     return 0;
 }
 
-struct queue construct_queue()
+struct queue * construct_queue(int max_size)
 {
     return 0;
 }

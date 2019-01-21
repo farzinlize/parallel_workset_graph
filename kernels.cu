@@ -1,5 +1,6 @@
 #include "kernels.h"
 
+/* ### BFS KERNELS ### */
 __global__ void one_bfs_B_QU(struct graph * g, struct queue * workset, char * update, int level)
 {
     int tid = threadIdx.x;
