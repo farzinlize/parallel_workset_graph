@@ -1,6 +1,6 @@
-#include "graph.h"
+#include "structures.h"
 
-struct Graph consturct_graph(char * filename)
+struct graph consturct_graph(char * filename)
 {
     return 0;
 }
