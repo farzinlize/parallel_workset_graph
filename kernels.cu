@@ -1,5 +1,24 @@
 #include "kernels.h"
 
+/* ### WORKSET_GEN KERNELS ### */
+__global__ void workset_update_BM(char * update, char * bitmap_mask)
+{
+    int tid = threadIdx.x;
+    if (update[tid])    //thread divergence ALERT
+    {
+        bitmap_mask[tid] = 1;
+    } else 
+    {
+        bitmap_mask[tid] = 0;
+    }
+}
+
+__global__ void workset_update_QU(char * update, struct queue * workset)
+{
+    int tid = threadIdx.x;
+}
+
+
 /* ### BFS KERNELS ### */
 __global__ void one_bfs_B_QU(struct graph * g, struct queue * workset, char * update, int level)
 {
