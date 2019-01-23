@@ -24,9 +24,9 @@ struct queue
 };
 
 struct queue * construct_queue(int max_size);
-int queue_push(int item);
-int queue_clear();
-int queue_get(int index, int * item);
+int queue_push(struct queue * workset, int item);
+int queue_clear(struct queue * workset);
+int queue_get(struct queue * workset, int index, int * item);
 
 
 #endif
