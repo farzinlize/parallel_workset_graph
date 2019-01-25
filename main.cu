@@ -4,6 +4,14 @@ extern "C"{
     #include "kernels.h"
 }
 
+int sum_array(int *a_in, int size)
+{
+    int sum = a_in[0];
+    for(int i = 1 ; i < size ; i++)
+        sum += a_in[i];
+    return sum;
+}
+
 void run_bfs(struct graph * g_h)
 {
     /* initial data on host */
@@ -38,15 +46,16 @@ void run_bfs(struct graph * g_h)
     //TODO: initial zero on GPU (copy a zero-array to GPU or run a kernel for it)
 
     /* set and define desicion variables */
-    int level = 0, block_count, thread_per_block, algo;
+    int level = 0, block_count, thread_per_block, workset_size = workset->size;
     double avrage_outdeg = get_average_out_deg(g_h);
+    int algo = decide(avrage_outdeg, workset, &block_count, &thread_per_block);
 
     while (workset->size != 0)
     {
-        algo = decide(avrage_outdeg, workset, &block_count, &thread_per_block);
         if (algo == B_QU)
         {
             one_bfs_B_QU<<<block_count, thread_per_block>>>(g_d, workset_d, update_d, level++);
+            add
         } else if (algo == B_BM) 
         {
             one_bfs_B_BM<<<block_count, thread_per_block>>>(g_d, workset_d, update_d, level++);
@@ -57,6 +66,11 @@ void run_bfs(struct graph * g_h)
         {
             one_bfs_T_BM<<<block_count, thread_per_block>>>(g_d, workset_d, update_d, level++);
         }
+        /* sync with device and transfer workset size to host for desicion making */
+        CUDA_CHECK_RETURN(cudaDeviceSynchronize());
+	    CUDA_CHECK_RETURN(cudaGetLastError());
+        CUDA_CHECK_RETURN(cudaMemcpy(&workset->size, &workset_d->size, sizeof(int), cudaMemcpyDeviceToHost));
+        algo = decide(avrage_outdeg, workset, &block_count, &thread_per_block);
     }
 }
 
