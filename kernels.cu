@@ -18,7 +18,7 @@ __global__ void workset_update_QU(char * update, struct queue * workset)
     int tid = threadIdx.x;
     if (tid == 0)   //first thread clear the workset (no critical section)
     {
-        int queue_clear(workset);
+        queue_clear(workset);
     }
     if (update[tid])
     {
@@ -103,13 +103,13 @@ __global__ void one_bfs_T_BM(struct graph * g, char * bitmap_mask, char * update
 }
 
 /* ### DECISION KERNELS ### */
-__global__ void add_kernel(int *a_in)
+__global__ void add_kernel(int *a_in, int * out)
 {
 	extern __shared__ int a_s[];
 	unsigned int tid_block = threadIdx.x;
 	unsigned int tid = (blockDim.x*2) * blockIdx.x + tid_block;
-	
-	a_s[tid_block] = a_in[tid] + a_in[tid+blockDim.x];
+    
+    a_s[tid_block] = a_in[tid] + a_in[tid+blockDim.x];
 	__syncthreads();
 
     for (unsigned int s = blockDim.x/2; s > 0 ; s >>= 1)
@@ -120,5 +120,5 @@ __global__ void add_kernel(int *a_in)
 	}
 
     if (tid_block == 0)
-        a_in[blockIdx.x] = a_s[0];
+        out[blockIdx.x] = a_s[0];
 }
