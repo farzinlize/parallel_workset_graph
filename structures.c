@@ -7,7 +7,7 @@ struct graph * consturct_graph(char * filename)
 
 int get_average_out_deg(struct graph * g)
 {
-    return 0;
+    return g->node_vector[g->size]; //size of edge_vector
 }
 
 struct queue * construct_queue(int max_size)
