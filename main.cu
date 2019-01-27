@@ -4,7 +4,7 @@ extern "C"{
     #include "kernels.h"
 }
 
-#define ADD_THREAD_PER_BLOCK 1024
+#define COVERING_THREAD_PER_BLOCK 1024
 
 int sum_array(int *a_in, int size)
 {
@@ -25,10 +25,10 @@ void run_bfs(struct graph * g_h)
     int level = 0, block_count, thread_per_block, workset_size = workset->size;
     double avrage_outdeg = get_average_out_deg(g_h);
     int algo = decide(avrage_outdeg, workset_size, &block_count, &thread_per_block);
-    int add_block_count = (g_h->size - 1)/ADD_THREAD_PER_BLOCK + 1;
-    int update_size = add_block_count * ADD_THREAD_PER_BLOCK;
+    int covering_block_count = (g_h->size - 1)/COVERING_THREAD_PER_BLOCK + 1;
+    int update_size = covering_block_count * COVERING_THREAD_PER_BLOCK;
     int * add_result_h;
-    add_result_h = (int *)malloc(sizeof(int)*add_block_count);
+    add_result_h = (int *)malloc(sizeof(int)*covering_block_count);
     
     /* initial on and transform data to device */
     /*    initial workset queue on device      */
@@ -56,38 +56,45 @@ void run_bfs(struct graph * g_h)
     int * add_result_d;
     int one = 1;
     CUDA_CHECK_RETURN(cudaMalloc((void **)&update_d, sizeof(char)*update_size));
-    //TODO: initial zero on GPU (copy a zero-array to GPU or run a kernel for it)
-    CUDA_CHECK_RETURN(cudaMalloc((void **)&add_result_d, sizeof(int)*add_block_count));
     CUDA_CHECK_RETURN(cudaMalloc((void **)&bitmap_d, sizeof(char)*g_h->size));
-    CUDA_CHECK_RETURN(cudaMemcpy(&bitmap_d[0], &one, sizeof(int), cudaMemcpyHostToDevice));
+    //TODO: initial zero on GPU update_d and bitmap_d (copy a zero-array to GPU or run a kernel for it)
+    CUDA_CHECK_RETURN(cudaMalloc((void **)&add_result_d, sizeof(int)*covering_block_count));
+    /*    transform bitmap to device    */
+    CUDA_CHECK_RETURN(cudaMemcpy(bitmap_d, &one, sizeof(int), cudaMemcpyHostToDevice));
 
     while (workset_size != 0)
     {
         if (algo == B_QU)
         {
-            workset_update_BM<<<block_count, thread_per_block>>>(update_d, bitmap_d);
+            workset_update_QU<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, workset_d);
             one_bfs_B_QU<<<block_count, thread_per_block>>>(g_d, workset_d, update_d, level++);
         } else if (algo == B_BM) 
         {
+            workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
             one_bfs_B_BM<<<block_count, thread_per_block>>>(g_d, bitmap_d, update_d, level++);
         } else if (algo == T_QU)
         {
+            workset_update_QU<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, workset_d);
             one_bfs_T_QU<<<block_count, thread_per_block>>>(g_d, workset_d, update_d, level++);
         } else if (algo == T_BM)
         {
+            workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
             one_bfs_T_BM<<<block_count, thread_per_block>>>(g_d, bitmap_d, update_d, level++);
         }
         /* calculate workset size and decide the next move */
-        add_kernel<<<add_block_count, ADD_THREAD_PER_BLOCK, sizeof(int)*ADD_THREAD_PER_BLOCK>>>(update_d, add_result_d);
+        add_kernel<<<covering_block_count, COVERING_THREAD_PER_BLOCK, sizeof(int)*COVERING_THREAD_PER_BLOCK>>>(update_d, add_result_d);
 
         CUDA_CHECK_RETURN(cudaDeviceSynchronize()); //wait for GPU
         CUDA_CHECK_RETURN(cudaGetLastError());
         
-        CUDA_CHECK_RETURN(cudaMemcpy(add_result_h, add_result_d, sizeof(int)*add_block_count, cudaMemcpyDeviceToHost));
-        workset_size = sum_array(add_result_h, add_block_count);
+        CUDA_CHECK_RETURN(cudaMemcpy(add_result_h, add_result_d, sizeof(int)*covering_block_count, cudaMemcpyDeviceToHost));
+        workset_size = sum_array(add_result_h, covering_block_count);
 
         algo = decide(avrage_outdeg, workset_size, &block_count, &thread_per_block);
     }
+
+    /*    free memory CPU and GPU    */
+    //TODO
 }
 
 int main()
