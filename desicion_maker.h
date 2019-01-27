@@ -12,6 +12,7 @@
 #define T2 2688
 /* T3/#num == 6% */
 
-int decide(double average_outdeg, struct queue * workset_size, int * block_count, int * thread_per_block);
+int decide(double average_outdeg, int workset_size, int * block_count, int * thread_per_block);
+int next_sample_distance();
 
 #endif

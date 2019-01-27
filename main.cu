@@ -25,6 +25,7 @@ void run_bfs(struct graph * g_h)
     int level = 0, block_count, thread_per_block, workset_size = workset->size;
     double avrage_outdeg = get_average_out_deg(g_h);
     int algo = decide(avrage_outdeg, workset_size, &block_count, &thread_per_block);
+    int next_sample = next_sample_distance();
     int covering_block_count = (g_h->size - 1)/COVERING_THREAD_PER_BLOCK + 1;
     int update_size = covering_block_count * COVERING_THREAD_PER_BLOCK;
     int * add_result_h;
@@ -66,20 +67,32 @@ void run_bfs(struct graph * g_h)
     {
         if (algo == B_QU)
         {
-            workset_update_QU<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, workset_d);
-            one_bfs_B_QU<<<block_count, thread_per_block>>>(g_d, workset_d, update_d, level++);
+            while(next_sample--)
+            {
+                workset_update_QU<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, workset_d);
+                one_bfs_B_QU<<<block_count, thread_per_block>>>(g_d, workset_d, update_d, level++);
+            }
         } else if (algo == B_BM) 
         {
-            workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
-            one_bfs_B_BM<<<block_count, thread_per_block>>>(g_d, bitmap_d, update_d, level++);
+            while(next_sample--)
+            {
+                workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
+                one_bfs_B_BM<<<block_count, thread_per_block>>>(g_d, bitmap_d, update_d, level++);
+            }
         } else if (algo == T_QU)
         {
-            workset_update_QU<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, workset_d);
-            one_bfs_T_QU<<<block_count, thread_per_block>>>(g_d, workset_d, update_d, level++);
+            while(next_sample--)
+            {
+                workset_update_QU<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, workset_d);
+                one_bfs_T_QU<<<block_count, thread_per_block>>>(g_d, workset_d, update_d, level++);
+            }
         } else if (algo == T_BM)
         {
-            workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
-            one_bfs_T_BM<<<block_count, thread_per_block>>>(g_d, bitmap_d, update_d, level++);
+            while(next_sample--)
+            {
+                workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
+                one_bfs_T_BM<<<block_count, thread_per_block>>>(g_d, bitmap_d, update_d, level++);
+            }
         }
         /* calculate workset size and decide the next move */
         add_kernel<<<covering_block_count, COVERING_THREAD_PER_BLOCK, sizeof(int)*COVERING_THREAD_PER_BLOCK>>>(update_d, add_result_d);
@@ -91,6 +104,7 @@ void run_bfs(struct graph * g_h)
         workset_size = sum_array(add_result_h, covering_block_count);
 
         algo = decide(avrage_outdeg, workset_size, &block_count, &thread_per_block);
+        next_sample = next_sample_distance();
     }
 
     /*    free memory CPU and GPU    */
