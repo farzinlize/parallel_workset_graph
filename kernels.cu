@@ -39,15 +39,16 @@ __global__ void one_bfs_B_QU(struct graph * g, struct queue * workset, char * up
 {
     int tid = threadIdx.x;
     int bid = blockIdx.x; 
-    if (bid < workset.size) //each block process a workset entry
+    if (bid < workset->size) //each block process a workset entry
     {
         int node = workset->items[bid];
-        int neighbours_count = g->edge_vector[node+1] - g->edge_vector[node];
-        if (tid < neighbours_count)
+        int node_neighbour_index = g->node_vector[node];
+        if (tid < (g->node_vector[node+1] - node_neighbour_index))
         {
             //each thread in block process a neighbour of original node of block
-            int neighbour = g->edge_vector[node] + tid;
-            if (g->node_level_vector[neighbour] > level + 1) {
+            int neighbour = g->edge_vector[node_neighbour_index + tid];
+            if (g->node_level_vector[neighbour] > level + 1)
+            {
                 g->node_level_vector[neighbour] = level + 1;
                 update[neighbour] = 1;
             }
@@ -61,12 +62,13 @@ __global__ void one_bfs_B_BM(struct graph * g, char * bitmap_mask, char * update
     int node = blockIdx.x; //each block process a node
     if (bitmap_mask[node])
     {
-        int neighbours_count = g->edge_vector[node+1] - g->edge_vector[node];
-        if (tid < neighbours_count)
+        int node_neighbour_index = g->node_vector[node];
+        if (tid < (g->node_vector[node+1] - node_neighbour_index))
         {
             //each thread in block process a neighbour of original node of block
-            int neighbour = g->edge_vector[node] + tid;
-            if (g->node_level_vector[neighbour] > level+1) {
+            int neighbour = g->edge_vector[node_neighbour_index + tid];
+            if (g->node_level_vector[neighbour] > level+1)
+            {
                 g->node_level_vector[neighbour] = level + 1;
                 update[neighbour] = 1;
             }
@@ -77,12 +79,15 @@ __global__ void one_bfs_B_BM(struct graph * g, char * bitmap_mask, char * update
 __global__ void one_bfs_T_QU(struct graph * g, struct queue * workset, char * update, int level)
 {
     int tid = threadIdx.x;
-    if (tid < workset.size) //each thread process a workset entry
+    if (tid < workset->size) //each thread process a workset entry
     {
         int node = workset->items[tid];
+        int node_neighbour_index = g->node_vector[node];
+        int neighbours_count = g->node_vector[node+1] - node_neighbour_index;
         //visiting neighbours
-        for (int neighbour = g->edge_vector[node]; neighbour < g->edge_vector[node+1]; neighbour_id++)
+        for (int neighbour_id = 0; neighbour_id < neighbours_count; neighbour_id++)
         {
+            int neighbour = g->edge_vector[node_neighbour_index + neighbour_id];
             if (g->node_level_vector[neighbour] > level+1)
             {
                 g->node_level_vector[neighbour] = level + 1;
@@ -98,9 +103,13 @@ __global__ void one_bfs_T_BM(struct graph * g, char * bitmap_mask, char * update
     if (bitmap_mask[node]) //each thread process a node if it's in bitmap_mask
     {
         //visiting neighbours
-        for (int neighbour = g->edge_vector[node]; neighbour < g->edge_vector[node+1]; neighbour_id++)
+        int node_neighbour_index = g->node_vector[node];
+        int neighbours_count = g->node_vector[node+1] - node_neighbour_index;
+        for (int neighbour_id = 0 ; neighbour_id < neighbours_count; neighbour_id++)
         {
-            if (g->node_level_vector[neighbour] > level+1) {
+            int neighbour = g->edge_vector[node_neighbour_index + neighbour_id];
+            if (g->node_level_vector[neighbour] > level+1)
+            {
                 g->node_level_vector[neighbour] = level + 1;
                 update[neighbour] = 1;
             }
@@ -109,7 +118,7 @@ __global__ void one_bfs_T_BM(struct graph * g, char * bitmap_mask, char * update
 }
 
 /* ### DECISION KERNELS ### */
-__global__ void add_kernel(int *a_in, int * out)
+__global__ void add_kernel(char *a_in, int * out)
 {
 	extern __shared__ int a_s[];
 	unsigned int tid_block = threadIdx.x;

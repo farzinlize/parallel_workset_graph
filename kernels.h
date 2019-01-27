@@ -22,7 +22,7 @@ __global__ void one_bfs_T_QU(struct graph * g, struct queue * workset, char * up
 __global__ void one_bfs_T_BM(struct graph * g, char * bitmap_mask, char * update, int level);
 __global__ void workset_update_QU(char * update, struct queue * workset);
 __global__ void workset_update_BM(char * update, char * bitmap_mask);
-__global__ void add_kernel(int *a_in);
+__global__ void add_kernel(char *a_in, int * out);
 __global__ void inital_char_array(char * array, char value);
 __global__ void inital_int_array(int * array, int value, int size);
 
