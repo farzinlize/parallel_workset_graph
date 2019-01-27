@@ -1,9 +1,9 @@
-#include "kernels.h"
+#include "kernels.cuh"
 
 /* ### WORKSET_GEN KERNELS ### */
 __global__ void workset_update_BM(char * update, char * bitmap_mask)
 {
-    int tid = threadIdx.x;
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
     if (update[tid])    //thread divergence ALERT
     {
         bitmap_mask[tid] = 1;
@@ -16,13 +16,18 @@ __global__ void workset_update_BM(char * update, char * bitmap_mask)
     update[tid] = 0;
 }
 
+void workset_update_BM_wrapper(int block_count, int thread_per_block, char * update, char * bitmap)
+{
+    workset_update_BM<<<block_count, thread_per_block>>>(update, bitmap);
+}
+
 __global__ void workset_update_QU(char * update, struct queue * workset)
 {
-    int tid = threadIdx.x;
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
     if (tid == 0)   //first thread clear the workset (no critical section)
     {
-        queue_clear(workset);
-    }
+        workset->size = 0;
+    } //need for sync?
     if (update[tid])
     {
         atomicExch(&workset->items[workset->size], tid);

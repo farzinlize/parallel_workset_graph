@@ -3,7 +3,8 @@
 /* TODO: add macro */
 
 #include <cuda.h>
-#include "kernels.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 /* ### GRAPH ### */
 struct graph

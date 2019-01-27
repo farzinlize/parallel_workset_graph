@@ -1,3 +1,7 @@
 .vscode/
 *.exp
 *.lib
+*.obj
+*.exe
+kernels.cu
+kernels.cuh
