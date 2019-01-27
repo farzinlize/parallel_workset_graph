@@ -122,3 +122,18 @@ __global__ void add_kernel(int *a_in, int * out)
     if (tid_block == 0)
         out[blockIdx.x] = a_s[0];
 }
+
+/* ### INITAL KERNELS ### */
+__global__ void inital_char_array(char * array, char value, int size)
+{
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    if(tid < size)
+        array[tid] = value;
+}
+
+__global__ void inital_int_array(int * array, int value, int size)
+{
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    if(tid < size)
+        array[tid] = value;
+}
