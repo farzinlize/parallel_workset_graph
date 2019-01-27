@@ -11,6 +11,9 @@ __global__ void workset_update_BM(char * update, char * bitmap_mask)
     {
         bitmap_mask[tid] = 0;
     }
+
+    /* reset update */
+    update[tid] = 0;
 }
 
 __global__ void workset_update_QU(char * update, struct queue * workset)
@@ -25,6 +28,9 @@ __global__ void workset_update_QU(char * update, struct queue * workset)
         atomicExch(&workset->items[workset->size], tid);
         atomicAdd(&workset->size, 1);
     }
+
+    /* reset update */
+    update[tid] = 0;
 }
 
 
@@ -124,11 +130,10 @@ __global__ void add_kernel(int *a_in, int * out)
 }
 
 /* ### INITAL KERNELS ### */
-__global__ void inital_char_array(char * array, char value, int size)
+__global__ void inital_char_array(char * array, char value)
 {
     int tid = threadIdx.x + blockIdx.x * blockDim.x;
-    if(tid < size)
-        array[tid] = value;
+    array[tid] = value;
 }
 
 __global__ void inital_int_array(int * array, int value, int size)
