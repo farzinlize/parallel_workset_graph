@@ -37,7 +37,7 @@ struct graph * consturct_graph_device(struct graph * g_h)
     CUDA_CHECK_RETURN(cudaMemcpy(g_d->node_vector, g_h->node_vector, sizeof(int)*(g_h->size+1), cudaMemcpyHostToDevice));
     CUDA_CHECK_RETURN(cudaMemcpy(g_d->edge_vector, g_h->edge_vector, sizeof(int)*(g_h->node_vector[g->size]), cudaMemcpyHostToDevice));
     CUDA_CHECK_RETURN(cudaMemcpy(g_d->size, g_h->size, sizeof(int), cudaMemcpyHostToDevice));
-    
+
     return g_d;
 }
 
@@ -83,7 +83,7 @@ struct queue * construct_queue_device(int max_size)
 {
     struct queue * workset_d;
     CUDA_CHECK_RETURN(cudaMalloc((void **)&workset_d, sizeof(struct queue *)));
-    CUDA_CHECK_RETURN(cudaMalloc((void **)&workset_d->items, max_size);
+    CUDA_CHECK_RETURN(cudaMalloc((void **)&workset_d->items, sizeof(int)*max_size);
     return workset_d;
 }
 
