@@ -2,6 +2,7 @@ extern "C"{
     #include "structures.h"
     #include "desicion_maker.h"
     #include "kernels.h"
+    #include <limits.h>
 }
 
 #define COVERING_THREAD_PER_BLOCK 1024
@@ -14,54 +15,46 @@ int sum_array(int *a_in, int size)
     return sum;
 }
 
-void run_bfs(struct graph * g_h)
+void run_bfs(struct graph * g_h, int source)
 {
-    /* initial data on host */
-    struct queue * workset = construct_queue(g_h->size);
-    g_h->node_level_vector[0] = 0;
-    queue_push(workset, 0);
+    /* necessary but not useful variables */
+    int one = 1, zero = 0;
+
+    /* initial workset queue on device */
+    struct queue * workset_d = construct_queue_device(g_h->size);
+    int workset_size = 0
+    queue_push_device(workset_d, source, &workset_size);
 
     /* set and define desicion variables */
-    int level = 0, block_count, thread_per_block, workset_size = workset->size;
+    int level = 0, block_count, thread_per_block;
     double avrage_outdeg = get_average_out_deg(g_h);
     int algo = decide(avrage_outdeg, workset_size, &block_count, &thread_per_block);
     int next_sample = next_sample_distance();
     int covering_block_count = (g_h->size - 1)/COVERING_THREAD_PER_BLOCK + 1;
     int update_size = covering_block_count * COVERING_THREAD_PER_BLOCK;
-    int * add_result_h;
-    add_result_h = (int *)malloc(sizeof(int)*covering_block_count);
-    
-    /* initial on and transform data to device */
-    /*    initial workset queue on device      */
-    struct queue * workset_d;
-    CUDA_CHECK_RETURN(cudaMalloc((void **)&workset_d, sizeof(struct queue *)));
-    CUDA_CHECK_RETURN(cudaMalloc( (void **)&workset_d->items, g_h->size));
-    /*    transform workset queue to device    */
-    CUDA_CHECK_RETURN(cudaMemcpy(workset_d->items, workset->items, sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK_RETURN(cudaMemcpy(&workset_d->size, &workset->size, sizeof(int), cudaMemcpyHostToDevice));
-    /*    initial graph on device    */
-    struct graph * g_d;
-    CUDA_CHECK_RETURN(cudaMalloc((void **)&g_d, sizeof(struct graph *)));
-    CUDA_CHECK_RETURN(cudaMalloc((void **)&g_d->size, sizeof(int)));
-    CUDA_CHECK_RETURN(cudaMalloc((void **)&g_d->node_vector, sizeof(int)*(g_h->size+1)));
-    CUDA_CHECK_RETURN(cudaMalloc((void **)&g_d->edge_vector, sizeof(int)*(g_h->node_vector[g->size])));
-    //TODO: MACRO for initialing level or distance array for GPU
+    int * add_result_h = (int *)malloc(sizeof(int)*covering_block_count);
+
+    /* initial graph on device based on BFS */
+    struct graph * g_d = consturct_graph_device(g_h);
     CUDA_CHECK_RETURN(cudaMalloc((void **)&g_d->node_level_vector, sizeof(int)*g_h->size));
-    CUDA_CHECK_RETURN(cudaMalloc((void **)&g_d->node_distance_vector, sizeof(int)*g_h->size));
-    /*    transform graph to device  */
-    CUDA_CHECK_RETURN(cudaMemcpy(g_d->node_vector, g_h->node_vector, sizeof(int)*(g_h->size+1), cudaMemcpyHostToDevice));
-    CUDA_CHECK_RETURN(cudaMemcpy(g_d->edge_vector, g_h->edge_vector, sizeof(int)*(g_h->node_vector[g->size]), cudaMemcpyHostToDevice));
-    CUDA_CHECK_RETURN(cudaMemcpy(g_d->size, g_h->size, sizeof(int), cudaMemcpyHostToDevice));
-    /*    initial arrays on device    */
+    inital_int_array<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(g_d->node_level_vector, INT_MAX, g_h->size);
+    
+    /* initial arrays on device */
     char * update_d, * bitmap_d;
-    int * add_result_d;
-    int one = 1;
     CUDA_CHECK_RETURN(cudaMalloc((void **)&update_d, sizeof(char)*update_size));
     CUDA_CHECK_RETURN(cudaMalloc((void **)&bitmap_d, sizeof(char)*g_h->size));
-    //TODO: initial zero on GPU update_d and bitmap_d (copy a zero-array to GPU or run a kernel for it)
+    inital_char_array<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, 0);
+    inital_char_array<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(bitmap_d, 0);
+
+    int * add_result_d;
     CUDA_CHECK_RETURN(cudaMalloc((void **)&add_result_d, sizeof(int)*covering_block_count));
-    /*    transform bitmap to device    */
-    CUDA_CHECK_RETURN(cudaMemcpy(bitmap_d, &one, sizeof(int), cudaMemcpyHostToDevice));
+
+    CUDA_CHECK_RETURN(cudaDeviceSynchronize()); //wait for inital kernels
+    CUDA_CHECK_RETURN(cudaGetLastError());
+
+    /* bfs first move (workset updated instantly after initialized) */
+    CUDA_CHECK_RETURN(cudaMemcpy(&bitmap_d[source], &one, sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK_RETURN(cudaMemcpy(&g_d->node_level_vector[source], &zero, sizeof(int), cudaMemcpyHostToDevice));
 
     while (workset_size != 0)
     {
@@ -107,8 +100,18 @@ void run_bfs(struct graph * g_h)
         next_sample = next_sample_distance();
     }
 
-    /*    free memory CPU and GPU    */
+    /* return level array of graph to host */
     //TODO
+
+    /* free memory GPU */
+    destroy_queue_device(workset_d);
+    destroy_graph_device(g_d);
+    cudaFree(update_d);
+    cudaFree(bitmap_d);
+    cudaFree(add_result_d);
+
+    /* free memory CPU */
+    free(add_result_h);
 }
 
 int main()
