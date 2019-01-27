@@ -101,7 +101,7 @@ void run_bfs(struct graph * g_h, int source)
     }
 
     /* return level array of graph to host */
-    //TODO
+    CUDA_CHECK_RETURN(cudaMemcpy(g_h->node_level_vector, g_d->node_level_vector, sizeof(int)*g->size, cudaMemcpyDeviceToHost));
 
     /* free memory GPU */
     destroy_queue_device(workset_d);
