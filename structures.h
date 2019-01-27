@@ -2,6 +2,9 @@
 #define _STRUCTURES_H
 /* TODO: add macro */
 
+#include <cuda.h>
+#include "kernels.h"
+
 /* ### GRAPH ### */
 struct graph
 {
@@ -13,8 +16,15 @@ struct graph
     int size;                   //number of nodes
 };
 
+/* host functions */
 struct graph * consturct_graph(char * filename);
+void destroy_graph(struct graph * g);
 int get_average_out_deg(struct graph * g);
+
+/* device functions */
+struct graph * consturct_graph_device_from_file(char * filename);
+struct graph * consturct_graph_device(struct graph * g);
+void destroy_graph_device(struct graph * g);
 
 /* ### QUEUE ### */
 struct queue
@@ -23,10 +33,16 @@ struct queue
     int size;
 };
 
+/* host functions */
 struct queue * construct_queue(int max_size);
+void destroy_queue(struct queue * q);
 int queue_push(struct queue * workset, int item);
 int queue_clear(struct queue * workset);
 int queue_get(struct queue * workset, int index, int * item);
 
+/* device functions */
+struct queue * construct_queue_device(int max_size);
+void destroy_queue_device(struct queue * q);
+int queue_push_device(struct queue * workset_d, int item, int * workset_size_h);
 
 #endif
