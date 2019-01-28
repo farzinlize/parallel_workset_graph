@@ -2,6 +2,7 @@
 #define _STRUCTURES_H
 /* TODO: add macro */
 
+#include <stdio.h>
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
@@ -18,24 +19,26 @@ struct graph
 };
 
 /* host functions */
-struct graph * consturct_graph(char * filename);
+struct graph * consturct_graph(char * nodes_file, char * edges_file);
+
 void destroy_graph(struct graph * g);
-int get_average_out_deg(struct graph * g);
+double get_average_out_deg(struct graph * g);
 
 /* device functions */
 struct graph * consturct_graph_device_from_file(char * filename);
-struct graph * consturct_graph_device(struct graph * g);
+void consturct_graph_device(struct graph * g, struct graph **f);
 void destroy_graph_device(struct graph * g);
 
 /* ### QUEUE ### */
 struct queue
 {
     int * items;
+    //int items[1024];
     int size;
 };
 
 /* host functions */
-struct queue * construct_queue(int max_size);
+// struct queue * construct_queue(int max_size);
 void destroy_queue(struct queue * q);
 int queue_push(struct queue * workset, int item);
 int queue_clear(struct queue * workset);
