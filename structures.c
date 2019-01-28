@@ -73,11 +73,14 @@ void consturct_graph_device(struct graph * g_h, struct graph ** g_d)
     // struct graph * g_d;
     struct graph * g_h2 = (struct graph *)malloc(sizeof(struct graph));
     
-    cudaMalloc(&g_h2->node_vector, sizeof(int)*(g_h->size));
+    cudaMalloc((void **)&g_h2->node_vector, sizeof(int)*(g_h->size));
     cudaMemcpy(g_h2->node_vector, g_h->node_vector, sizeof(int)*(g_h->size), cudaMemcpyHostToDevice);
 
-    cudaMalloc(&g_h2->edge_vector, sizeof(int)*(g_h->edge_vector[g_h->size]));
+    cudaMalloc((void **)&g_h2->edge_vector, sizeof(int)*(g_h->edge_vector[g_h->size]));
     cudaMemcpy(g_h2->edge_vector, g_h->edge_vector, sizeof(int)*(g_h->node_vector[g_h->size]), cudaMemcpyHostToDevice);
+
+    cudaMalloc((void **)&g_h2->node_level_vector, sizeof(int)*(g_h->size));
+//    cudaMemcpy(g_h2->edge_vector, g_h->edge_vector, sizeof(int)*(g_h->node_vector[g_h->size]), cudaMemcpyHostToDevice);
 
     // cudaMemcpy(g_h2->size, g_h->size, sizeof(int), cudaMemcpyHostToDevice);
     g_h2->size = g_h->size;

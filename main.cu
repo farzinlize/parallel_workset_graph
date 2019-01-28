@@ -5,6 +5,7 @@ extern "C"{
 #include <limits.h>
 #include <stdio.h>
 #include "cuda_runtime.h"
+#include <unistd.h>
 #include "device_launch_parameters.h"
 #include <cuda.h>
 
@@ -47,8 +48,8 @@ __global__ void workset_update_QU(int * update, struct queue * workset)
 
     if (update[tid])
     {
-        atomicExch(&workset->items[workset->size], tid);
-        atomicAdd(&workset->size, 1); //need critical section
+//        atomicExch(&workset->items[workset->size], tid);
+  //      atomicAdd(&workset->size, 1); //need critical section
     }
 
     /* reset update */
@@ -57,6 +58,7 @@ __global__ void workset_update_QU(int * update, struct queue * workset)
 
 __global__ void workset_update_QU_S(int * update, struct queue * workset, int update_size)
 {
+	return;
     workset->size = 0;
     for(int i=0 ; i<update_size ; i++)
     {
@@ -220,8 +222,6 @@ struct queue * construct_queue_device(int max_size)
 void run_bfs(struct graph * g_h, int source)
 {
     /* necessary but not useful variables */
-    int one = 1, zero = 0;
-
     /* initial workset queue on device */
     struct queue * workset_d = construct_queue_device(g_h->size);
     // int workset_size = 0;
@@ -230,9 +230,10 @@ void run_bfs(struct graph * g_h, int source)
     /* set and define desicion variables */
     int level = 0, block_count, thread_per_block;
     double avrage_outdeg = get_average_out_deg(g_h);
-    int x;
-    cudaMemcpy(&x, &workset_d->size, sizeof(int), cudaMemcpyDeviceToHost);
-    int algo = decide(avrage_outdeg, x, 1020, &block_count, &thread_per_block); // 
+    int workset_size;
+    cudaMemcpy(&workset_size, &workset_d->size, sizeof(int), cudaMemcpyDeviceToHost);
+    int algo = decide(avrage_outdeg, workset_size, 1020, &block_count, &thread_per_block); // 
+    printf("## INFO: alog: %d\n", algo);
     // return;
     int next_sample = next_sample_distance();
     int covering_block_count = (g_h->size - 1)/COVERING_THREAD_PER_BLOCK + 1;
@@ -242,46 +243,75 @@ void run_bfs(struct graph * g_h, int source)
     /* initial graph on device based on BFS */
     struct graph * g_d;
     consturct_graph_device(g_h, &g_d);
+    printf("## INFO: graph constructed\n");
+    // return;
     // return;
     //struct graph * g_d;
     //cudaMemcpy(g_d,g_h,sizeof(struct graph),cudaMemcpyHostToDevice);
-    // CUDA_CHECK_RETURN(cudaMalloc((void **)&g_d->node_level_vector, sizeof(int)*g_h->size));
+    //CUDA_CHECK_RETURN(cudaMalloc((void **)&g_d->node_level_vector, sizeof(int)*g_h->size));
     
-    inital_int_array<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(g_d, INT_MAX);
+ //   cudaMemset(g_d->node_level_vector, INT_MAX, g_h->size);
+//    inital_int_array<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(g_d, INT_MAX);
     // return;
     /* initial arrays on device */
     int * update_d;
     int * bitmap_d;
-    // printf("update_size:%d\n")
-    printf("hello\n");
-    printf("g_h->size:%d\n", g_h->size);
-    printf("update_Size:%d\n", update_size);
-    CUDA_CHECK_RETURN(cudaMalloc(&update_d, sizeof(int)*76800));
-    CUDA_CHECK_RETURN(cudaMalloc(&bitmap_d, sizeof(int)*76800));
-    inital_char_array<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, 0);
-    inital_char_array<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(bitmap_d, 0);
-    return;
     int * add_result_d;
-    CUDA_CHECK_RETURN(cudaMalloc((void **)&add_result_d, sizeof(int)*covering_block_count));
+    // printf("update_size:%d\n")
+    // printf("g_h->size:%d\n", g_h->size);
+    // printf("update_Size:%d\n", update_size);
 
+    CUDA_CHECK_RETURN(cudaMalloc(&update_d, sizeof(int)*update_size));
+    CUDA_CHECK_RETURN(cudaMalloc(&bitmap_d, sizeof(int)*update_size));
+    CUDA_CHECK_RETURN(cudaMalloc(&add_result_d, sizeof(int)*covering_block_count));
+    printf("## INFO: cudaMalloc done\n");
+
+    cudaMemset(update_d, 0, update_size * sizeof(int));
+    cudaMemset(bitmap_d, 0, update_size * sizeof(int));
+
+    printf("## INFO: cudaMemset done\n");
+
+
+    //inital_char_array<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, 0);
+    //inital_char_array<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(bitmap_d, 0);
+    //sleep(3);
+    //printf("%d\n", covering_block_count);
+    //return;
+
+/*
     CUDA_CHECK_RETURN(cudaDeviceSynchronize()); //wait for inital kernels
     CUDA_CHECK_RETURN(cudaGetLastError());
+*/
 
     /* bfs first move (workset updated instantly after initialized) */
+    cudaMemset(&bitmap_d[source], 1, sizeof(int));
+    cudaMemset(&g_d->node_level_vector[source], 0, sizeof(int));
+    printf("## INFO: source init done\n");
+/*
     CUDA_CHECK_RETURN(cudaMemcpy(&bitmap_d[source], &one, sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK_RETURN(cudaMemcpy(&g_d->node_level_vector[source], &zero, sizeof(int), cudaMemcpyHostToDevice));
+*/
 
-    while (workset_d->size != 0)
+    cudaMemcpy(&workset_size, &workset_d->size, sizeof(int), cudaMemcpyDeviceToHost);
+
+    //CUDA_CHECK_RETURN(cudaMemcpy(&workset_size, &workset_d->size, sizeof(int), cudaMemcpyHostToDevice));
+    printf("workset_d->size: %d\n", workset_size);
+
+    while (workset_size != 0)
     {
+	printf("algo: %d\n", algo);
+	printf("G_QU: %d\n", B_QU);
         if (algo == B_QU)
         {
+		printf("1\n");
             while(next_sample--)
             {
-                workset_update_QU_S<<<1, 1>>>(update_d, workset_d, workset_d->size);
+                workset_update_QU_S<<<1, 1>>>(update_d, workset_d, workset_size);
                 one_bfs_B_QU<<<block_count, thread_per_block>>>(g_d, workset_d, update_d, level++);
             }
         } else if (algo == B_BM) 
         {
+		printf("2\n");
             while(next_sample--)
             {
                 workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
@@ -289,6 +319,7 @@ void run_bfs(struct graph * g_h, int source)
             }
         } else if (algo == T_QU)
         {
+		printf("3\n");
             while(next_sample--)
             {
                 workset_update_QU_S<<<1, 1>>>(update_d, workset_d, update_size);
@@ -296,6 +327,8 @@ void run_bfs(struct graph * g_h, int source)
             }
         } else if (algo == T_BM)
         {
+		printf("4\n");
+		return;
             while(next_sample--)
             {
                 workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
@@ -304,17 +337,23 @@ void run_bfs(struct graph * g_h, int source)
         }
         /* calculate workset size and decide the next move */
         add_kernel<<<covering_block_count, COVERING_THREAD_PER_BLOCK, sizeof(int)*COVERING_THREAD_PER_BLOCK>>>(update_d, add_result_d);
+	
+	sleep(10);
+	return;
 
         CUDA_CHECK_RETURN(cudaDeviceSynchronize()); //wait for GPU
         CUDA_CHECK_RETURN(cudaGetLastError());
+	return;
         
         CUDA_CHECK_RETURN(cudaMemcpy(add_result_h, add_result_d, sizeof(int)*covering_block_count, cudaMemcpyDeviceToHost));
-        int workset_size = sum_array(add_result_h, covering_block_count);
+        workset_size = sum_array(add_result_h, covering_block_count);
 
         algo = decide(avrage_outdeg, workset_size, 1020, &block_count, &thread_per_block); // mamamd
         next_sample = next_sample_distance();
+	return;
     }
 
+	return;
     /* return level array of graph to host */
     CUDA_CHECK_RETURN(cudaMemcpy(g_h->node_level_vector, g_d->node_level_vector, sizeof(int)*g_h->size, cudaMemcpyDeviceToHost));
 
