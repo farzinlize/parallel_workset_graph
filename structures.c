@@ -3,134 +3,128 @@
 /* ### GRAPH : HOST ### */
 struct graph * consturct_graph(char * nodes_file, char * edges_file)
 {
-    struct graph * g = (struct graph *) malloc(sizeof(struct graph));
+	struct graph * g = (struct graph *) malloc(sizeof(struct graph));
 
-    /* read nodes */
-    FILE *fptr = fopen(nodes_file, "r");
-    if (fptr == NULL)
-    {
-        printf("Cannot open file \n");
-        exit(0);
-    }
+	/* read nodes */
+	FILE *fptr = fopen(nodes_file, "r");
+	if (fptr == NULL)
+	{
+		printf("Cannot open file \n");
+		exit(0);
+	}
 
-    int node_size, edge_size, size, n, i;
-    fscanf(fptr, "%d", &node_size);
-    int * nodes = malloc(sizeof(int) * node_size);
-    i = 0;
-    size = node_size;
-    while (size--) {
-        fscanf(fptr, "%d", &n);
-        nodes[i++] = n;
-    }
-    fclose(fptr);
+	int node_size, edge_size, size, n, i;
+	fscanf(fptr, "%d", &node_size);
+	int * nodes = malloc(sizeof(int) * node_size);
+	i = 0;
+	size = node_size;
+	while (size--) {
+		fscanf(fptr, "%d", &n);
+		nodes[i++] = n;
+	}
+	fclose(fptr);
 
 
-    /* read edges */
-    fptr = fopen(edges_file, "r");
-    if (fptr == NULL)
-    {
-        printf("Cannot open file \n");
-        exit(0);
-    }
+	/* read edges */
+	fptr = fopen(edges_file, "r");
+	if (fptr == NULL)
+	{
+		printf("Cannot open file \n");
+		exit(0);
+	}
 
-    fscanf(fptr, "%d", &edge_size);
-    int * edges = malloc(sizeof(int) * edge_size);
-    i = 0;
-    size = edge_size;
-    while (size--) {
-        fscanf(fptr, "%d", &n);
-        edges[i++] = n;
-    }
-    fclose(fptr);
+	fscanf(fptr, "%d", &edge_size);
+	int * edges = malloc(sizeof(int) * edge_size);
+	i = 0;
+	size = edge_size;
+	while (size--) {
+		fscanf(fptr, "%d", &n);
+		edges[i++] = n;
+	}
+	fclose(fptr);
 
-    g->node_vector = nodes;
-    g->edge_vector = edges;
-    g->size = node_size;
+	g->node_vector = nodes;
+	g->edge_vector = edges;
+	g->size = node_size;
 
-    return g;
+	return g;
 }
 
 
 void destroy_graph(struct graph * g)
 {
-    return ;
+	return ;
 }
 
 double get_average_out_deg(struct graph * g)
 {
-    return g->node_vector[g->size] / g->size; //size of edge_vector
+	return g->node_vector[g->size] / g->size; //size of edge_vector
 }
 
 
 /* ### GRAPH : DEVICE ### */
 struct graph * consturct_graph_device_from_file(char * filename)
 {
-    return 0;
+	return 0;
 }
 
 void consturct_graph_device(struct graph * g_h, struct graph ** g_d)
 {
-    // struct graph * g_d;
-    struct graph * g_h2 = (struct graph *)malloc(sizeof(struct graph));
-    
-    cudaMalloc((void **)&g_h2->node_vector, sizeof(int)*(g_h->size));
-    cudaMemcpy(g_h2->node_vector, g_h->node_vector, sizeof(int)*(g_h->size), cudaMemcpyHostToDevice);
+	cudaMalloc(g_d, sizeof(struct graph));
 
-    cudaMalloc((void **)&g_h2->edge_vector, sizeof(int)*(g_h->edge_vector[g_h->size]));
-    cudaMemcpy(g_h2->edge_vector, g_h->edge_vector, sizeof(int)*(g_h->node_vector[g_h->size]), cudaMemcpyHostToDevice);
+	struct graph * g_h2 = (struct graph *)malloc(sizeof(struct graph));
+	memcpy(g_h2, g_h, sizeof(struct graph));
+		
+	cudaMalloc((void **)&g_h2->node_vector, sizeof(int)*(g_h->size));
+	cudaMemcpy((void *)g_h2->node_vector, (void *)g_h->node_vector, sizeof(int)*(g_h->size), cudaMemcpyHostToDevice);
 
-    cudaMalloc((void **)&g_h2->node_level_vector, sizeof(int)*(g_h->size));
-//    cudaMemcpy(g_h2->edge_vector, g_h->edge_vector, sizeof(int)*(g_h->node_vector[g_h->size]), cudaMemcpyHostToDevice);
+	cudaMalloc((void **)&g_h2->edge_vector, sizeof(int)*(g_h->edge_vector[g_h->size]));
+	cudaMemcpy(g_h2->edge_vector, g_h->edge_vector, sizeof(int)*(g_h->node_vector[g_h->size]), cudaMemcpyHostToDevice);
 
-    // cudaMemcpy(g_h2->size, g_h->size, sizeof(int), cudaMemcpyHostToDevice);
-    g_h2->size = g_h->size;
+	cudaMalloc((void **)&g_h2->node_level_vector, sizeof(int)*(g_h->size));
 
-    cudaMemcpy(*g_d, g_h2, sizeof(struct graph), cudaMemcpyHostToDevice);
+	cudaMemcpy(*g_d, g_h2, sizeof(struct graph), cudaMemcpyHostToDevice);
+	 
+	printf("g_h2->size: %d\n", g_h->size);
+	int i;
+	int x;
+	for (i = 0; i < g_h2->size && i < 100; i++) {
+		cudaMemcpy(&x, &((*g_d)->node_vector[i]), sizeof(int), cudaMemcpyDeviceToHost);
+		//memcpy(&x, &(g_h->edge_vector[i]), sizeof(int));
+		printf("g_d->node[%d]: %d\n", i, x);
+	}
 
-
-    /*    initial graph on device    */
-    // cudaMalloc((void **)&g_d, sizeof(struct graph *));
-    // cudaMalloc((void **)&g_d->size, sizeof(int));
-    // cudaMalloc((void **)&g_d->node_vector, sizeof(int)*(g_h->size+1));
-    // cudaMalloc((void **)&g_d->edge_vector, sizeof(int)*(g_h->node_vector[g_h->size]));
-
-    /*    transform graph to device  */
-    // cudaMemcpy(g_d->node_vector, g_h->node_vector, sizeof(int)*(g_h->size+1), cudaMemcpyHostToDevice);
-    // cudaMemcpy(g_d->edge_vector, g_h->edge_vector, sizeof(int)*(g_h->node_vector[g_h->size]), cudaMemcpyHostToDevice);
-    // cudaMemcpy(&g_d->size, &g_h->size, sizeof(int), cudaMemcpyHostToDevice);
-
-    // return g_d;
 }
 
 void destroy_graph_device(struct graph * g)
 {
-    return ;
+	return ;
 }
 
 /* ### QUEUE : HOST ### */
 struct queue * construct_queue(int max_size)
 {
-    return 0;
+	return 0;
 }
 
 void destroy_queue(struct queue * q)
 {
-    return ;
+	return ;
 }
 
 int queue_push(struct queue * workset, int item)
 {
-    return 0;
+	return 0;
 }
 
 int queue_clear(struct queue * workset)
 {
-    return 0;
+	return 0;
 }
 
 int queue_get(struct queue * workset, int index, int * item)
 {
-    return 0;
+	return 0;
 }
 
 
@@ -145,13 +139,13 @@ int queue_get(struct queue * workset, int index, int * item)
 
 void destroy_queue_device(struct queue * q)
 {
-    return ;
+	return ;
 }
 
 int queue_push_device(struct queue * workset_d, int item, int * workset_size_h)
 {
-    cudaMemcpy(&workset_d->items[(*workset_size_h)++], &item, sizeof(int), cudaMemcpyHostToDevice);
-    return 0;
-    cudaMemcpy(&workset_d->size, workset_size_h, sizeof(int), cudaMemcpyHostToDevice);
-    return 0;
+	cudaMemcpy(&workset_d->items[(*workset_size_h)++], &item, sizeof(int), cudaMemcpyHostToDevice);
+	return 0;
+	cudaMemcpy(&workset_d->size, workset_size_h, sizeof(int), cudaMemcpyHostToDevice);
+	return 0;
 }
