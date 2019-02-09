@@ -2,6 +2,7 @@
 #define _STRUCTURES_H
 /* TODO: add macro */
 
+#include <stdio.h>
 #include <cuda.h>
 #include "cuda_runtime.h"
 
@@ -17,12 +18,12 @@ typedef struct graph
 } graph;
 
 /* host functions */
-graph consturct_graph(char * filename);
+graph consturct_graph(const char * nodes_file, const char * edges_file);
 void destroy_graph(graph g);
 double get_average_out_deg(graph g);
 
 /* device functions */
-graph consturct_graph_device_from_file(char * filename);
+graph consturct_graph_device_from_file(const char * nodes_file, const char * edges_file);
 graph consturct_graph_device(graph g);
 void destroy_graph_device(graph g_d);
 
