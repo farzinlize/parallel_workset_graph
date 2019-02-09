@@ -8,6 +8,9 @@ extern "C"{
 }
 
 #define COVERING_THREAD_PER_BLOCK 1024
+#define DATASET_COUNT 1
+
+const char * dataset_files[DATASET_COUNT][2] = {{"dataset/twitter-all.nodes", "dataset/twitter-all.edges"}};
 
 int sum_array(int *a_in, int size)
 {
@@ -43,7 +46,7 @@ void run_bfs(graph g_h, int source)
     /* initial arrays on device */
     char * update_d, * bitmap_d;
     CUDA_CHECK_RETURN(cudaMalloc((void **)&update_d, sizeof(char)*update_size));
-    CUDA_CHECK_RETURN(cudaMalloc((void **)&bitmap_d, sizeof(char)*g_h.size));
+    CUDA_CHECK_RETURN(cudaMalloc((void **)&bitmap_d, sizeof(char)*update_size));
     CUDA_CHECK_RETURN(cudaMemset(update_d, 0, sizeof(char)*update_size));
     CUDA_CHECK_RETURN(cudaMemset(bitmap_d, 0, sizeof(char)*update_size));
 
@@ -112,7 +115,14 @@ void run_bfs(graph g_h, int source)
     free(add_result_h);
 }
 
-int main()
+int main(int argc, char * argv[])
 {
+    printf("[MAIN] app.cu main\tDataset index: %d\n", DATASET_INDEX);
+
+    /* read data set */
+    graph g_h = consturct_graph(dataset_files[DATASET_INDEX][0], dataset_files[DATASET_INDEX][1]);
+
+    run_bfs(g_h, 0);
+
     return 0;
 }
