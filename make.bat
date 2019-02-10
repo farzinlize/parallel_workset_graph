@@ -11,6 +11,7 @@ if "%1" == "clean" goto :clean
 if "%1" == "debug" set __defines=%__defines% -DDEBUG
 if "%1" == "test" set __defines=%__defines% -DTEST
 if "%1" == "csr" set __defines=%__defines% -DCSR_VALIDATION
+if "%1" == "detail" set __defines=%__defines% -DDETAIL
 if "%1" == "-dataset" goto :set_dataset
 if "%1" == "-name" goto :set_name
 shift

@@ -75,6 +75,11 @@ graph consturct_graph(const char * nodes_file, const char * edges_file)
     /* close edges_file */
 	fclose(fptr);
 
+    #ifdef DETAIL
+    printf("[DETAIL][GRAPH] graph node count: %d\n", result.size);
+    printf("[DETAIL][GRAPH] graph directed edges count: %d\n", result.node_vector[result.size]);
+    #endif
+
 	return result;
 }
 
@@ -82,12 +87,22 @@ void destroy_graph(graph g)
 {
     free(g.node_vector);
     free(g.edge_vector);
+
+    #ifdef DETAIL
+    printf("[DETAIL][FREE] node_vector and edge_vector of host graph destroyed\n");
+    #endif
 }
 
 double get_average_out_deg(graph g)
 {
     /* size of edge_vector indicate summation of out degres */
+    #ifdef DETAIL
+    double avrage_out_deg = (g.node_vector[g.size]) / g.size;
+    printf("[DETAIL][GRAPH] graph average out degree: %f\n", avrage_out_deg);
+    return avrage_out_deg;
+    #else
     return (g.node_vector[g.size]) / g.size;
+    #endif
 }
 
 
@@ -110,6 +125,10 @@ graph consturct_graph_device(graph g)
     cudaMemcpy(g_d.node_vector, g.node_vector, sizeof(int)*(g.size+1), cudaMemcpyHostToDevice);
     cudaMemcpy(g_d.edge_vector, g.edge_vector, sizeof(int)*(g.node_vector[g.size]), cudaMemcpyHostToDevice);
 
+    #ifdef DETAIL
+    printf("[DETAIL][DEVICE] node_vector and edge_vector deployed on device\n");
+    #endif
+
     return g_d;
 }
 
@@ -118,7 +137,9 @@ void destroy_graph_device(graph g_d)
     cudaFree(g_d.node_vector);
     cudaFree(g_d.edge_vector);
 
-    cudaFree(g_d.node_level_vector); //TODO: level or distance?
+    #ifdef DETAIL
+    printf("[DETAIL][FREE] node_vector and edge_vector of device destroyed\n");
+    #endif
 }
 
 
@@ -134,10 +155,18 @@ queue construct_queue_device_with_source(int max_size, int * source_p)
     /* add source to items */
     cudaMemcpy(q_d.items, source_p, sizeof(int), cudaMemcpyHostToDevice); //TODO: test it
 
+    #ifdef DETAIL
+    printf("[DETAIL][DEVICE] workset queue builed and first item added successfully\n");
+    #endif
+
     return q_d;
 }
 
 void destroy_queue_device(queue q_d)
 {
     cudaFree(q_d.items);
+
+    #ifdef DETAIL
+    printf("[DETAIL][FREE] workset queue on device destroyed\n");
+    #endif
 }
