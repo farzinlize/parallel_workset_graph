@@ -1,8 +1,9 @@
 #include "kernels.cuh"
 #include <stdio.h>
 #include <limits.h>
-
 #include "structures.h"
+#include "sequential.h"
+
 extern "C"{
     #include "desicion_maker.h"
 }
@@ -41,7 +42,7 @@ void run_bfs(graph g_h, int source)
     /* initial graph on device based on BFS */
     graph g_d = consturct_graph_device(g_h);
     CUDA_CHECK_RETURN(cudaMalloc((void **)&(g_d.node_level_vector), sizeof(int)*g_h.size));
-    CUDA_CHECK_RETURN(cudaMemset(g_d.node_level_vector, 0, sizeof(int)*g_h.size));
+    CUDA_CHECK_RETURN(cudaMemset(g_d.node_level_vector, 0, sizeof(int)*g_h.size)); //WRONG! INT_MAX value
     
     /* initial arrays on device */
     char * update_d, * bitmap_d;
@@ -123,7 +124,18 @@ int main(int argc, char * argv[])
     /* read data set */
     graph g_h = consturct_graph(dataset_files[DATASET_INDEX][0], dataset_files[DATASET_INDEX][1]);
 
-    run_bfs(g_h, 0);
+    #ifdef DEBUG
+    printf("[DEBUG][MAIN] running sequential bfs with graph size: %d\n", g_h.size);
+    #endif
+
+    sequential_run_bfs_QU(g_h, 0);
+
+    #ifdef DEBUG
+    printf("[DEBUG][MAIN] returning sequential bfs\n");
+    #endif
+
+    //free(g_h.node_level_vector);
+    destroy_graph(g_h);
 
     return 0;
 }

@@ -34,6 +34,11 @@ typedef struct queue
     int size;
 } queue;
 
+/* host functions */
+queue construct_queue(int max_size);
+void destroy_queue(queue q);
+int queue_push(queue * q, int item);
+
 /* device functions */
 queue construct_queue_device_with_source(int max_size, int * source_p);
 void destroy_queue_device(queue q);

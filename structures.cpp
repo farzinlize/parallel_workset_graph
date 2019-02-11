@@ -143,6 +143,27 @@ void destroy_graph_device(graph g_d)
 }
 
 
+/* ### QUEUE : HOST ### */
+queue construct_queue(int max_size)
+{
+    queue result;
+    result.size = 0;
+    result.items = (int *)malloc(sizeof(int)*max_size);
+    return result;
+}
+
+void destroy_queue(queue q)
+{
+    free(q.items);
+}
+
+int queue_push(queue * q, int item)
+{
+    q->items[q->size++] = item;
+    return 0; //TODO: check for maximum size
+}
+
+
 /* ### QUEUE : DEVICE ### */
 queue construct_queue_device_with_source(int max_size, int * source_p)
 {
