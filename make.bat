@@ -2,7 +2,7 @@
 SETLOCAL
 SET dataset=0
 SET app_name=ag.exe
-SET source=main.cu kernels.cu structures.cpp sequential.cpp desicion_maker.c
+SET source=main.cu kernels.cu structures.cpp sequential.cpp desicion_maker.c fuzzy_timing.c
 SET __defines=
 if "%~1" == "" goto :command
 if "%1" == "clean" goto :clean

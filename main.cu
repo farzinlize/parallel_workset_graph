@@ -6,6 +6,7 @@
 
 extern "C"{
     #include "desicion_maker.h"
+    #include "fuzzy_timing.h"
 }
 
 #define COVERING_THREAD_PER_BLOCK 1024
@@ -117,6 +118,7 @@ void run_bfs(graph g_h, int source)
     free(add_result_h);
 }
 
+#ifndef TEST
 int main(int argc, char * argv[])
 {
     printf("[MAIN] app.cu main\tDataset index: %d\n", DATASET_INDEX);
@@ -128,14 +130,63 @@ int main(int argc, char * argv[])
     printf("[DEBUG][MAIN] running sequential bfs with graph size: %d\n", g_h.size);
     #endif
 
-    sequential_run_bfs_QU(g_h, 0);
+    set_clock();
+
+    sequential_run_bfs_QU(&g_h, 0)
+
+    double elapced = get_elapsed_time();
 
     #ifdef DEBUG
-    printf("[DEBUG][MAIN] returning sequential bfs\n");
+    printf("[DEBUG][MAIN] returning sequential bfs, time: %.2f\n", elapced);
     #endif
 
-    //free(g_h.node_level_vector);
+    free(g_h.node_level_vector);
     destroy_graph(g_h);
 
     return 0;
 }
+#else
+
+__global__ void testKernel(queue * q)
+{
+    printf("queue size at the beginning of kernel: %d\n", q->size);
+
+    for(int i=0;i<q->size;i++)
+        printf("items id: %d\titem value: %d\n", i, q->items[i]);
+
+    q->size = 2;
+
+    printf("queue size at the end of kernel: %d\n", q->size);
+}
+
+int main(int argc, char * argv[])
+{
+    printf("[MAIN] test main at app.cu\tDataset index: %d\n", DATASET_INDEX);
+
+    queue * test;
+    printf("1\n");
+    cudaMallocManaged(&test, sizeof(queue));
+    cudaMallocManaged(&test->items, sizeof(int)*20);
+    printf("2\n");
+    test->items[0] = 85;
+    printf("2.5\n");
+    test->items[1] = 95;
+    test->items[2] = 29;
+    test->items[3] = 55;
+    test->items[4] = 33;
+
+    printf("3\n");
+    test->size = 5;
+
+    printf("4\n");
+    testKernel<<<1, 1>>>(test);
+
+    cudaDeviceSynchronize();
+    
+    printf("queue size after kernel in main: %d\n", test->size);
+
+    cudaFree(test->items);
+
+    return 0;
+}
+#endif
