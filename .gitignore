@@ -1,7 +1,4 @@
 .vscode/
-*.exp
-*.exe
-*.lib
 backups/
 dataset/
 build/

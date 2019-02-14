@@ -19,7 +19,7 @@ if NOT "%~1"=="" goto :loop_args
 
 :command
 echo %source% %__defines%
-nvcc -o %app_name% %source% %__defines% -DDATASET_INDEX=%dataset% -DWINDOWS
+nvcc -o build/%app_name% %source% %__defines% -DDATASET_INDEX=%dataset% -DWINDOWS
 ENDLOCAL
 goto :eof
 
@@ -35,5 +35,5 @@ goto :loop_args
 
 :clean
 echo clean
-del *.lib *.exp *.exe
+del /Q build\*
 ENDLOCAL
