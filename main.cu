@@ -132,7 +132,7 @@ int main(int argc, char * argv[])
 
     set_clock();
 
-    sequential_run_bfs_QU(&g_h, 0)
+    sequential_run_bfs_QU(&g_h, 0);
 
     double elapced = get_elapsed_time();
 

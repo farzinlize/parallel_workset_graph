@@ -26,7 +26,7 @@ __global__ void workset_update_QU(char * update, queue workset)
     if (update[tid])
     {
         atomicExch(&workset.items[workset.size], tid);
-        atomicAdd(&workset.size, 1);
+//        atomicAdd(&workset.size, 1);
     }
 
     /* reset update */
