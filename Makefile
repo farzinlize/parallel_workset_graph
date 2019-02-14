@@ -1,4 +1,4 @@
-nvcc_options= -gencode arch=compute_30,code=sm_30 -lm --compiler-options -Wall 
+nvcc_options= -gencode arch=compute_30,code=sm_30 -lm -DLINUX --compiler-options -Wall 
 sources = main.cu kernels.cu structures.cpp sequential.cpp desicion_maker.c fuzzy_timing.c
 
 all: ag ag_optimized ag_detailed ag_td
