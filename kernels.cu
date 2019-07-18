@@ -111,7 +111,7 @@ __global__ void one_bfs_T_BM(graph g, char * bitmap_mask, char * update, int lev
     }
 }
 
-/* ### DECISION KERNELS ### */
+/* ### ADD KERNELS ### */
 __global__ void add_kernel(char *a_in, int * out)
 {
 	extern __shared__ int a_s[];
@@ -130,6 +130,57 @@ __global__ void add_kernel(char *a_in, int * out)
 
     if (tid_block == 0)
         out[blockIdx.x] = a_s[0];
+}
+
+__device__ void warpReduce(volatile int* sdata, int tid)
+{
+	sdata[tid] += sdata[tid + 32];
+	sdata[tid] += sdata[tid + 16];
+	sdata[tid] += sdata[tid + 8];
+	sdata[tid] += sdata[tid + 4];
+	sdata[tid] += sdata[tid + 2];
+	sdata[tid] += sdata[tid + 1];
+}
+
+__global__ void add_kernel_full(int * a_in, int * out)
+{
+	extern __shared__ int a_s[];
+	unsigned int tid_block = threadIdx.x;
+	unsigned int tid = (blockDim.x*2) * blockIdx.x + tid_block;
+	
+	a_s[tid_block] = a_in[tid] + a_in[tid+blockDim.x];
+    __syncthreads();
+
+	if (tid_block < 512) {a_s[tid_block] = a_s[tid_block] + a_s[tid_block + 512];} __syncthreads();
+	if (tid_block < 256) {a_s[tid_block] = a_s[tid_block] + a_s[tid_block + 256];} __syncthreads();
+	if (tid_block < 128) {a_s[tid_block] = a_s[tid_block] + a_s[tid_block + 128];} __syncthreads();
+	if (tid_block <  64) {a_s[tid_block] = a_s[tid_block] + a_s[tid_block +  64];} __syncthreads();
+
+	if (tid_block<32) warpReduce(a_s, tid_block);
+
+	if (tid_block == 0){
+		out[blockIdx.x] = a_s[0];
+	}
+}
+
+__global__ void add_kernel_half(int * a_in, int * out)
+{
+	extern __shared__ int a_s[];
+	unsigned int tid_block = threadIdx.x;
+	unsigned int tid = (blockDim.x*2) * blockIdx.x + tid_block;
+	
+	a_s[tid_block] = a_in[tid] + a_in[tid+blockDim.x];
+    __syncthreads();
+
+	if (tid_block < 256) {a_s[tid_block] = a_s[tid_block] + a_s[tid_block + 256];} __syncthreads();
+	if (tid_block < 128) {a_s[tid_block] = a_s[tid_block] + a_s[tid_block + 128];} __syncthreads();
+	if (tid_block <  64) {a_s[tid_block] = a_s[tid_block] + a_s[tid_block +  64];} __syncthreads();
+
+	if (tid_block<32) warpReduce(a_s, tid_block);
+
+	if (tid_block == 0){
+		out[blockIdx.x] = a_s[0];
+	}
 }
 
 /* ### INITAL KERNELS ### */
