@@ -23,7 +23,78 @@ int sum_array(int *a_in, int size)
     return sum;
 }
 
-void run_bfs(graph g_h, int source)
+void T_BM_bfs(graph g_h, int source)
+{
+    /* set and define desicion variables */
+    int level = 0, workset_size = 1;
+    int covering_block_count = (g_h.size - 1)/COVERING_THREAD_PER_BLOCK + 1;
+    int update_size = covering_block_count * COVERING_THREAD_PER_BLOCK;
+
+    /* set reduction add kernel variables */
+    int add_half_full_flag = covering_block_count%2;
+    int add_block_count, add_block_size;
+    if(add_half_full_flag){
+        add_block_size = COVERING_THREAD_PER_BLOCK/2;
+        add_block_count = covering_block_count;
+    }else{
+        add_block_size = COVERING_THREAD_PER_BLOCK;
+        add_block_count = covering_block_count/2;
+    }
+    int shared_size = add_block_size * sizeof(int);
+    int * add_result_h = (int *)malloc(sizeof(int)*add_block_count);
+
+    /* initial graph on device based on BFS */
+    graph g_d = consturct_graph_device(g_h);
+    CUDA_CHECK_RETURN(cudaMalloc((void **)&(g_d.node_level_vector), sizeof(int)*g_h.size));
+    CUDA_CHECK_RETURN(cudaMemset(g_d.node_level_vector, INT_MAX, sizeof(int)*g_h.size));
+
+    /* initial arrays on device */
+    char * update_d, * bitmap_d;
+    CUDA_CHECK_RETURN(cudaMalloc((void **)&update_d, sizeof(char)*update_size));
+    CUDA_CHECK_RETURN(cudaMalloc((void **)&bitmap_d, sizeof(char)*update_size));
+    CUDA_CHECK_RETURN(cudaMemset(update_d, 0, sizeof(char)*update_size));
+    CUDA_CHECK_RETURN(cudaMemset(bitmap_d, 0, sizeof(char)*update_size));
+
+    int * add_result_d;
+    CUDA_CHECK_RETURN(cudaMalloc((void **)&(add_result_d), sizeof(int) * add_block_count));
+
+    /* bfs first move in butmap and level vector */
+    //TODO: use cudaMemset instead of copy or a better way
+    CUDA_CHECK_RETURN(cudaMemcpy(&bitmap_d[source], &one, sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK_RETURN(cudaMemcpy(&g_d.node_level_vector[source], &zero, sizeof(int), cudaMemcpyHostToDevice));
+
+    while(workset_size != 0){
+        one_bfs_T_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(g_d, bitmap_d, update_d, level++);
+        workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
+
+        if(add_half_full_flag){
+            add_kernel_half<<<add_block_count, add_block_size, shared_size>>>(bitmap_d, add_result_d);
+        }else{
+            add_kernel_full<<<add_block_count, add_block_size, shared_size>>>(bitmap_d, add_result_d);
+        }
+
+        CUDA_CHECK_RETURN(cudaDeviceSynchronize()); //wait for GPU
+        CUDA_CHECK_RETURN(cudaGetLastError());
+
+        CUDA_CHECK_RETURN(cudaMemcpy(add_result_h, add_result_d, add_block_count*sizeof(int), cudaMemcpyDeviceToHost));
+        workset_size = sum_array(add_result_h, add_block_count);
+    }
+
+    /* return level array of graph to host */
+    CUDA_CHECK_RETURN(cudaMemcpy(g_h.node_level_vector, g_d.node_level_vector, sizeof(int)*g_h.size, cudaMemcpyDeviceToHost));
+
+    /* free memory GPU */
+    destroy_graph_device(g_d);
+    cudaFree(g_d.node_level_vector);
+    cudaFree(update_d);
+    cudaFree(bitmap_d);
+    cudaFree(add_result_d);
+
+    /* free memory CPU */
+    free(add_result_h);
+}
+
+void adaptive_bfs(graph g_h, int source)
 {
     /* necessary but not useful variables */
     int one = 1, zero = 0;
@@ -127,8 +198,8 @@ int main(int argc, char * argv[])
     /* read data set */
     graph g_h = consturct_graph(dataset_files[DATASET_INDEX][0], dataset_files[DATASET_INDEX][1]);
 
-    #ifdef DETAIL
-    printf("[DETAIL][MAIN] running sequential bfs with graph size: %d\n", g_h.size);
+    #ifdef DEBUG
+    printf("[DEBUG][MAIN] running sequential bfs with graph size: %d\n", g_h.size);
     #endif
 
     set_clock();
@@ -137,9 +208,7 @@ int main(int argc, char * argv[])
 
     double elapced = get_elapsed_time();
 
-    #ifdef DETAIL
-    printf("[DETAIL][MAIN] returning sequential bfs, time: %.2f\n", elapced);
-    #endif
+    printf("[MAIN] returning sequential bfs, time: %.2f\n", elapced);
 
     free(g_h.node_level_vector);
     destroy_graph(g_h);
