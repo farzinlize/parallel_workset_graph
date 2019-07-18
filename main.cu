@@ -15,6 +15,22 @@ extern "C"{
 
 const char * dataset_files[DATASET_COUNT][2] = {{"dataset/twitter-all.nodes", "dataset/twitter-all.edges"}};
 
+void copy(int * a, int * b, int size)
+{
+    for(int i = 0; i < size ; i++){
+        b[i] = a[i];
+    }
+}
+
+int validate(int * a, int * b, int size)
+{
+    for(int i = 0; i < size ; i++){
+        if(a[i] != b[i])
+            return i;
+    }
+    return -1;
+}
+
 int sum_array(int *a_in, int size)
 {
     int sum = a_in[0];
@@ -25,6 +41,9 @@ int sum_array(int *a_in, int size)
 
 void T_BM_bfs(graph g_h, int source)
 {
+    /* necessary but not useful variables */
+    int one = 1, zero = 0;
+
     /* set and define desicion variables */
     int level = 0, workset_size = 1;
     int covering_block_count = (g_h.size - 1)/COVERING_THREAD_PER_BLOCK + 1;
@@ -209,6 +228,20 @@ int main(int argc, char * argv[])
     double elapced = get_elapsed_time();
 
     printf("[MAIN] returning sequential bfs, time: %.2f\n", elapced);
+
+    int * sequential_result = (int *)malloc(sizeof(int)*g_h.size);
+    copy(g_h.node_level_vector, sequential_result, g_h.size);
+    free(g_h.node_level_vector);
+
+    set_clock();
+
+    T_BM_bfs(g_h, 0);
+
+    elapced = get_elapsed_time();
+
+    printf("[MAIN] returning parallel (T_BM) bfs, time: %.2f\n", elapced);
+
+    int test = validate(sequential_result, g_h.node_level_vector, g_h.size);
 
     free(g_h.node_level_vector);
     destroy_graph(g_h);

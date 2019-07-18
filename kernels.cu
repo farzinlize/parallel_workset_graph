@@ -142,7 +142,7 @@ __device__ void warpReduce(volatile int* sdata, int tid)
 	sdata[tid] += sdata[tid + 1];
 }
 
-__global__ void add_kernel_full(int * a_in, int * out)
+__global__ void add_kernel_full(char * a_in, int * out)
 {
 	extern __shared__ int a_s[];
 	unsigned int tid_block = threadIdx.x;
@@ -163,7 +163,7 @@ __global__ void add_kernel_full(int * a_in, int * out)
 	}
 }
 
-__global__ void add_kernel_half(int * a_in, int * out)
+__global__ void add_kernel_half(char * a_in, int * out)
 {
 	extern __shared__ int a_s[];
 	unsigned int tid_block = threadIdx.x;
