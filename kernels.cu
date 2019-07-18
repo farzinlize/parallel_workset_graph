@@ -3,14 +3,8 @@
 /* ### WORKSET_GEN KERNELS ### */
 __global__ void workset_update_BM(char * update, char * bitmap_mask)
 {
-    int tid = threadIdx.x;
-    if (update[tid])    //thread divergence ALERT
-    {
-        bitmap_mask[tid] = 1;
-    } else 
-    {
-        bitmap_mask[tid] = 0;
-    }
+    int tid = blockDim.x*blockIdx.x + threadIdx.x;
+    bitmap_mask[tid] = update[tid];
 
     /* reset update */
     update[tid] = 0;
