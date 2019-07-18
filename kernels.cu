@@ -93,7 +93,7 @@ __global__ void one_bfs_T_QU(graph g, queue workset, char * update, int level)
 
 __global__ void one_bfs_T_BM(graph g, char * bitmap_mask, char * update, int level)
 {
-    int node = threadIdx.x;
+    int node = blockDim.x * blockIdx.x + threadIdx.x;
     if (bitmap_mask[node]) //each thread process a node if it's in bitmap_mask
     {
         //visiting neighbours

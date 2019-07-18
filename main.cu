@@ -67,6 +67,10 @@ void T_BM_bfs(graph g_h, int source)
     CUDA_CHECK_RETURN(cudaMalloc((void **)&(g_d.node_level_vector), sizeof(int)*g_h.size));
     CUDA_CHECK_RETURN(cudaMemset(g_d.node_level_vector, INT_MAX, sizeof(int)*g_h.size));
 
+    #ifdef DEBUG
+    printf("[DEBUG][T_BM_BFS] graph successfully initialed on device\n");
+    #endif
+
     /* initial arrays on device */
     char * update_d, * bitmap_d;
     CUDA_CHECK_RETURN(cudaMalloc((void **)&update_d, sizeof(char)*update_size));
@@ -77,14 +81,26 @@ void T_BM_bfs(graph g_h, int source)
     int * add_result_d;
     CUDA_CHECK_RETURN(cudaMalloc((void **)&(add_result_d), sizeof(int) * add_block_count));
 
+    #ifdef DEBUG
+    printf("[DEBUG][T_BM_BFS] arrays successfully initialed on device\n");
+    #endif
+
     /* bfs first move in butmap and level vector */
     //TODO: use cudaMemset instead of copy or a better way
     CUDA_CHECK_RETURN(cudaMemcpy(&bitmap_d[source], &one, sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK_RETURN(cudaMemcpy(&g_d.node_level_vector[source], &zero, sizeof(int), cudaMemcpyHostToDevice));
 
+    #ifdef DEBUG
+    printf("[DEBUG][T_BM_BFS] first manual bfs move successfully done\n");
+    #endif
+
     while(workset_size != 0){
         one_bfs_T_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(g_d, bitmap_d, update_d, level++);
         workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
+
+        #ifdef DEBUG
+        printf("[DEBUG][T_BM_BFS] bfs kernels of level:%d is launched\n", level);
+        #endif
 
         if(add_half_full_flag){
             add_kernel_half<<<add_block_count, add_block_size, shared_size>>>(bitmap_d, add_result_d);
@@ -97,10 +113,18 @@ void T_BM_bfs(graph g_h, int source)
 
         CUDA_CHECK_RETURN(cudaMemcpy(add_result_h, add_result_d, add_block_count*sizeof(int), cudaMemcpyDeviceToHost));
         workset_size = sum_array(add_result_h, add_block_count);
+
+        #ifdef DEBUG
+        printf("[DEBUG][T_BM_BFS] workset_size = %d\n", workset_size);
+        #endif
     }
 
     /* return level array of graph to host */
     CUDA_CHECK_RETURN(cudaMemcpy(g_h.node_level_vector, g_d.node_level_vector, sizeof(int)*g_h.size, cudaMemcpyDeviceToHost));
+
+    #ifdef DEBUG
+    printf("[DEBUG][T_BM_BFS] node level vector successfully returned to CPU\n");
+    #endif
 
     /* free memory GPU */
     destroy_graph_device(g_d);
@@ -231,7 +255,6 @@ int main(int argc, char * argv[])
 
     int * sequential_result = (int *)malloc(sizeof(int)*g_h.size);
     copy(g_h.node_level_vector, sequential_result, g_h.size);
-    free(g_h.node_level_vector);
 
     set_clock();
 
@@ -242,6 +265,8 @@ int main(int argc, char * argv[])
     printf("[MAIN] returning parallel (T_BM) bfs, time: %.2f\n", elapced);
 
     int test = validate(sequential_result, g_h.node_level_vector, g_h.size);
+
+    printf("[MAIN] validation result: %d\n", test);
 
     free(g_h.node_level_vector);
     destroy_graph(g_h);
