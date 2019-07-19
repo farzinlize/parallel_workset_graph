@@ -32,6 +32,7 @@ void sequential_run_bfs_QU(graph * g, int root)
     queue workset = construct_queue(g->size);
     int level = 0;
     queue_push(&workset, root);
+    g->node_level_vector[root] = 0;
 
     #ifdef DEBUG
     printf("[DEBUG][BFS] workset size after first push: %d\n", workset.size);
