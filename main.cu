@@ -265,6 +265,9 @@ int main(int argc, char * argv[])
     /* read data set */
     graph g_h = consturct_graph(dataset_files[DATASET_INDEX][0], dataset_files[DATASET_INDEX][1]);
 
+    /* initial bfs arrays */
+    g_h.node_level_vector = (int *)malloc(sizeof(int)*g_h.size);
+
     #ifdef DEBUG
     printf("[DEBUG][MAIN] running sequential bfs with graph size: %d\n", g_h.size);
     #endif
@@ -284,6 +287,7 @@ int main(int argc, char * argv[])
     }
     #endif
 
+    /* Save sequential result for future use */
     int * sequential_result = (int *)malloc(sizeof(int)*g_h.size);
     copy(g_h.node_level_vector, sequential_result, g_h.size);
 

@@ -27,7 +27,6 @@ queue sequential_one_bfs_QU(graph * g, queue workset, int level)
 
 void sequential_run_bfs_QU(graph * g, int root)
 {
-    g->node_level_vector = (int *)malloc(sizeof(int)*g->size);
     for(int i=0;i<g->size;i++) g->node_level_vector[i]=INT_MAX;
     queue workset = construct_queue(g->size);
     int level = 0;
