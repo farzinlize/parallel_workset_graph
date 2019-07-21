@@ -15,6 +15,37 @@ extern "C"{
 
 const char * dataset_files[DATASET_COUNT][2] = {{"dataset/twitter-all.nodes", "dataset/twitter-all.edges"}};
 
+void make_compare_file(char * file_name, char * result_1_name, int * result_1, char * result_2_name, int * result_2, int size)
+{
+    FILE * result_file = fopen(file_name, "wb");
+    int max_level_1 = -1, max_level_2 = -1, fault_tree = 0, diffrenet = 0;
+    int nodes_in_level_result_1[20] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int nodes_in_level_result_2[20] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    for(int i = 0; i<size; i++){
+        if(result_1[i] >= 20 || result_2[i] >= 20){
+            if((result_1[i] >= 20 && result_2[i] < 20) || (result_1[i] < 20 && result_2[i] >= 20))
+                fault_tree++;
+            fprintf(result_file, "node (is not in same tree): %d\t| %s level: %d\t| %s level: %d\n", i, result_1_name, result_1[i], result_2_name, result_2[i]);
+            continue;
+        }
+        if(result_1[i] != result_2[i])    diffrenet++;
+        if(result_1[i] > max_level_1)    max_level_1 = result_1[i];
+        if(result_2[i] > max_level_2)   max_level_2 = result_2[i];
+        nodes_in_level_result_1[result_1[i]]++;
+        nodes_in_level_result_2[result_2[i]]++;
+        fprintf(result_file, "node: %d\t| %s level: %d\t| %s level: %d\n", i, result_1_name, result_1[i], result_2_name, result_2[i]);
+    }
+    fprintf(result_file, "----------------------------------------\n");
+    fprintf(result_file, "max level in %s run: %d\nmax level in %s run: %d\n", result_1_name, max_level_1, result_2_name, max_level_2);
+    fprintf(result_file, "FAULT TREE --> %d\n", fault_tree);
+    fprintf(result_file, "NUMBER OF DIFFRENT (between two run) --> %d\n", diffrenet);
+    fprintf(result_file, "number of nodes in each level (%s)\n", result_1_name);
+    for(int i=0;i<max_level_1;i++)    fprintf(result_file, "level: %d\tnumber of nodes: %d\n", i, nodes_in_level_result_1[i]);
+    fprintf(result_file, "number of nodes in each level (%s)\n", result_2_name);
+    for(int i=0;i<max_level_2;i++)    fprintf(result_file, "level: %d\tnumber of nodes: %d\n", i, nodes_in_level_result_2[i]);
+    fclose(result_file);
+}
+
 void copy(int * a, int * b, int size)
 {
     for(int i = 0; i < size ; i++){
@@ -278,33 +309,7 @@ int main(int argc, char * argv[])
     }
     #endif
 
-    FILE * level_file = fopen("result_levels.out", "wb");
-    int max_level_seq = -1, max_level_parallel = -1, fault_tree = 0, diffrenet = 0;
-    int nodes_in_level_seq[20] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    int nodes_in_level_parallel[20] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    for(int i = 0; i<g_h.size; i++){
-        if(sequential_result[i] >= 20 || g_h.node_level_vector[i] >= 20){
-            if((sequential_result[i] >= 20 && g_h.node_level_vector[i] < 20) || (sequential_result[i] < 20 && g_h.node_level_vector[i] >= 20))
-                fault_tree++;
-            fprintf(level_file, "node (is not in same tree): %d\t| sequentinal level: %d\t| parallel level: %d\n", i, sequential_result[i], g_h.node_level_vector[i]);
-            continue;
-        }
-        if(sequential_result[i] != g_h.node_level_vector[i])    diffrenet++;
-        if(sequential_result[i] > max_level_seq)    max_level_seq = sequential_result[i];
-        if(g_h.node_level_vector[i] > max_level_parallel)   max_level_parallel = g_h.node_level_vector[i];
-        nodes_in_level_seq[sequential_result[i]]++;
-        nodes_in_level_parallel[g_h.node_level_vector[i]]++;
-        fprintf(level_file, "node: %d\t| sequentinal level: %d\t| parallel level: %d\n", i, sequential_result[i], g_h.node_level_vector[i]);
-    }
-    fprintf(level_file, "----------------------------------------\n");
-    fprintf(level_file, "max level in sequentinal run: %d\nmax level in parallel run: %d\n", max_level_seq, max_level_parallel);
-    fprintf(level_file, "FAULT TREE --> %d\n", fault_tree);
-    fprintf(level_file, "NUMBER OF DIFFRENT (between parallel and sequentinal run) --> %d\n", diffrenet);
-    fprintf(level_file, "number of nodes in each level (sequentinal)\n");
-    for(int i=0;i<max_level_seq;i++)    fprintf(level_file, "level: %d\tnumber of nodes: %d\n", i, nodes_in_level_seq[i]);
-    fprintf(level_file, "number of nodes in each level (parallel)\n");
-    for(int i=0;i<max_level_parallel;i++)    fprintf(level_file, "level: %d\tnumber of nodes: %d\n", i, nodes_in_level_parallel[i]);
-    fclose(level_file);
+    make_compare_file("compare_seq_TBM.out", "sequentinal", sequential_result, "T_BM", g_h.node_level_vector, g_h.size);
 
     free(g_h.node_level_vector);
     destroy_graph(g_h);
