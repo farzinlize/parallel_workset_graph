@@ -309,7 +309,7 @@ int main(int argc, char * argv[])
     }
     #endif
 
-    make_compare_file("compare_seq_TBM.out", "sequentinal", sequential_result, "T_BM", g_h.node_level_vector, g_h.size);
+    make_compare_file("out/compare_seq_TBM.out", "sequentinal", sequential_result, "T_BM", g_h.node_level_vector, g_h.size);
 
     free(g_h.node_level_vector);
     destroy_graph(g_h);
