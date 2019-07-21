@@ -22,15 +22,6 @@ void copy(int * a, int * b, int size)
     }
 }
 
-int validate(int * a, int * b, int size)
-{
-    for(int i = 0; i < size ; i++){
-        if(a[i] != b[i])
-            return i;
-    }
-    return -1;
-}
-
 int sum_array(int *a_in, int size)
 {
     int sum = a_in[0];
@@ -65,9 +56,11 @@ void T_BM_bfs(graph g_h, int source)
     /* initial graph on device based on BFS */
     graph g_d = consturct_graph_device(g_h);
     CUDA_CHECK_RETURN(cudaMalloc((void **)&(g_d.node_level_vector), sizeof(int)*g_h.size));
-    CUDA_CHECK_RETURN(cudaMemset(g_d.node_level_vector, INT_MAX, sizeof(int)*g_h.size));
-
+    CUDA_CHECK_RETURN(cudaMemset(g_d.node_level_vector, 20000, sizeof(int)*g_h.size));
+    
     #ifdef DEBUG
+    printf("[DEBUG][INT_MAX] size of int in cpu: %d\n", sizeof(int));
+    printf("[DEBUG][INT_MAX] levels initialed with value of : 20000\n");
     printf("[DEBUG][T_BM_BFS] graph successfully initialed on device\n");
     #endif
 
@@ -95,7 +88,7 @@ void T_BM_bfs(graph g_h, int source)
     #endif
 
     while(workset_size != 0){
-        one_bfs_T_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(g_d, bitmap_d, update_d, level++);
+        one_bfs_T_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(g_d, bitmap_d, update_d, ++level);
         workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
 
         #ifdef DEBUG
@@ -253,8 +246,22 @@ int main(int argc, char * argv[])
 
     printf("[MAIN] returning sequential bfs, time: %.2f\n", elapced);
 
+    #ifdef DEBUG
+    printf("[DEBUG] first 10 nodes level (sequentianl):\n");
+    for(int i=0;i<10;i++){
+        printf("node %d | level %d\n", i, g_h.node_level_vector[i]);
+    }
+    #endif
+
     int * sequential_result = (int *)malloc(sizeof(int)*g_h.size);
     copy(g_h.node_level_vector, sequential_result, g_h.size);
+
+    #ifdef DEBUG
+    printf("[DEBUG] first 10 sequential result:\n");
+    for(int i=0;i<10;i++){
+        printf("node %d | level %d\n", i, g_h.node_level_vector[i]);
+    }
+    #endif
 
     set_clock();
 
@@ -264,9 +271,40 @@ int main(int argc, char * argv[])
 
     printf("[MAIN] returning parallel (T_BM) bfs, time: %.2f\n", elapced);
 
-    int test = validate(sequential_result, g_h.node_level_vector, g_h.size);
+    #ifdef DEBUG
+    printf("[DEBUG] first 10 nodes level (parallel):\n");
+    for(int i=0;i<10;i++){
+        printf("node %d | level %d\n", i, g_h.node_level_vector[i]);
+    }
+    #endif
 
-    printf("[MAIN] validation result: %d\n", test);
+    FILE * level_file = fopen("result_levels.out", "wb");
+    int max_level_seq = -1, max_level_parallel = -1, fault_tree = 0, diffrenet = 0;
+    int nodes_in_level_seq[20] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int nodes_in_level_parallel[20] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    for(int i = 0; i<g_h.size; i++){
+        if(sequential_result[i] >= 20 || g_h.node_level_vector[i] >= 20){
+            if((sequential_result[i] >= 20 && g_h.node_level_vector[i] < 20) || (sequential_result[i] < 20 && g_h.node_level_vector[i] >= 20))
+                fault_tree++;
+            fprintf(level_file, "node (is not in same tree): %d\t| sequentinal level: %d\t| parallel level: %d\n", i, sequential_result[i], g_h.node_level_vector[i]);
+            continue;
+        }
+        if(sequential_result[i] != g_h.node_level_vector[i])    diffrenet++;
+        if(sequential_result[i] > max_level_seq)    max_level_seq = sequential_result[i];
+        if(g_h.node_level_vector[i] > max_level_parallel)   max_level_parallel = g_h.node_level_vector[i];
+        nodes_in_level_seq[sequential_result[i]]++;
+        nodes_in_level_parallel[g_h.node_level_vector[i]]++;
+        fprintf(level_file, "node: %d\t| sequentinal level: %d\t| parallel level: %d\n", i, sequential_result[i], g_h.node_level_vector[i]);
+    }
+    fprintf(level_file, "----------------------------------------\n");
+    fprintf(level_file, "max level in sequentinal run: %d\nmax level in parallel run: %d\n", max_level_seq, max_level_parallel);
+    fprintf(level_file, "FAULT TREE --> %d\n", fault_tree);
+    fprintf(level_file, "NUMBER OF DIFFRENT (between parallel and sequentinal run) --> %d\n", diffrenet);
+    fprintf(level_file, "number of nodes in each level (sequentinal)\n");
+    for(int i=0;i<max_level_seq;i++)    fprintf(level_file, "level: %d\tnumber of nodes: %d\n", i, nodes_in_level_seq[i]);
+    fprintf(level_file, "number of nodes in each level (parallel)\n");
+    for(int i=0;i<max_level_parallel;i++)    fprintf(level_file, "level: %d\tnumber of nodes: %d\n", i, nodes_in_level_parallel[i]);
+    fclose(level_file);
 
     free(g_h.node_level_vector);
     destroy_graph(g_h);
