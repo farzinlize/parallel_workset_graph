@@ -1,9 +1,11 @@
 #include "sequential.h"
 
+extern FILE * fileout;
+
 queue sequential_one_bfs_QU(graph * g, queue workset, int level)
 {
     #ifdef DEBUG
-    printf("[DEBUG][ONE_BFS] bfs level: %d\n", level);
+    fprintf(fileout, "[DEBUG][ONE_BFS] bfs level: %d\n", level);
     #endif
 
     queue next_workset = construct_queue(g->size);
@@ -34,13 +36,13 @@ void sequential_run_bfs_QU(graph * g, int root)
     g->node_level_vector[root] = 0;
 
     #ifdef DEBUG
-    printf("[DEBUG][BFS] workset size after first push: %d\n", workset.size);
+    fprintf(fileout, "[DEBUG][BFS] workset size after first push: %d\n", workset.size);
     #endif
 
     while(workset.size != 0){
 
         #ifdef DEBUG
-        printf("[DEBUG][BFS] workset size: %d\n", workset.size);
+        fprintf(fileout, "[DEBUG][BFS] workset size: %d\n", workset.size);
         #endif
 
         workset = sequential_one_bfs_QU(g, workset, level++);

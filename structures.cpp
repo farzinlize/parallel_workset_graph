@@ -1,5 +1,7 @@
 #include "structures.h"
 
+extern FILE * fileout;
+
 /* ### GRAPH : HOST ### */
 graph consturct_graph(const char * nodes_file, const char * edges_file)
 {
@@ -41,8 +43,8 @@ graph consturct_graph(const char * nodes_file, const char * edges_file)
 	}
 
     #ifdef CSR_VALIDATION
-    printf("[VALIDATE][CSR_GRAPH] first node_vector item must be zero: %s\n", first_zero_node_vector ? "PASS" : "FAIL");
-    printf("[VALIDATE][CSR_GRAPH] node_vector must be ascending: %s\n", ascending_node_vector ? "PASS" : "FAIL");
+    fprintf(fileout, "[VALIDATE][CSR_GRAPH] first node_vector item must be zero: %s\n", first_zero_node_vector ? "PASS" : "FAIL");
+    fprintf(fileout, "[VALIDATE][CSR_GRAPH] node_vector must be ascending: %s\n", ascending_node_vector ? "PASS" : "FAIL");
     #endif
 
     /* close nodes_file */
@@ -62,7 +64,7 @@ graph consturct_graph(const char * nodes_file, const char * edges_file)
 
     #ifdef CSR_VALIDATION
     if (result.node_vector[result.size] == edge_size) edge_vector_size = true;
-    printf("[VALIDATE][CSR_GRAPH] node_vector last item must be equal to edge_vector size: %s\n", edge_vector_size ? "PASS" : "FAIL");
+    fprintf(fileout, "[VALIDATE][CSR_GRAPH] node_vector last item must be equal to edge_vector size: %s\n", edge_vector_size ? "PASS" : "FAIL");
     #endif
 
 	result.edge_vector = (int *) malloc(sizeof(int) * edge_size);
@@ -76,8 +78,8 @@ graph consturct_graph(const char * nodes_file, const char * edges_file)
 	fclose(fptr);
 
     #ifdef DETAIL
-    printf("[DETAIL][GRAPH] graph node count: %d\n", result.size);
-    printf("[DETAIL][GRAPH] graph directed edges count: %d\n", result.node_vector[result.size]);
+    fprintf(fileout, "[DETAIL][GRAPH] graph node count: %d\n", result.size);
+    fprintf(fileout, "[DETAIL][GRAPH] graph directed edges count: %d\n", result.node_vector[result.size]);
     #endif
 
 	return result;
@@ -89,7 +91,7 @@ void destroy_graph(graph g)
     free(g.edge_vector);
 
     #ifdef DETAIL
-    printf("[DETAIL][FREE] node_vector and edge_vector of host graph destroyed\n");
+    fprintf(fileout, "[DETAIL][FREE] node_vector and edge_vector of host graph destroyed\n");
     #endif
 }
 
@@ -98,7 +100,7 @@ double get_average_out_deg(graph g)
     /* size of edge_vector indicate summation of out degres */
     #ifdef DETAIL
     double avrage_out_deg = (g.node_vector[g.size]) / g.size;
-    printf("[DETAIL][GRAPH] graph average out degree: %f\n", avrage_out_deg);
+    fprintf(fileout, "[DETAIL][GRAPH] graph average out degree: %f\n", avrage_out_deg);
     return avrage_out_deg;
     #else
     return (g.node_vector[g.size]) / g.size;
@@ -126,7 +128,7 @@ graph consturct_graph_device(graph g)
     cudaMemcpy(g_d.edge_vector, g.edge_vector, sizeof(int)*(g.node_vector[g.size]), cudaMemcpyHostToDevice);
 
     #ifdef DETAIL
-    printf("[DETAIL][DEVICE] node_vector and edge_vector deployed on device\n");
+    fprintf(fileout, "[DETAIL][DEVICE] node_vector and edge_vector deployed on device\n");
     #endif
 
     return g_d;
@@ -138,7 +140,7 @@ void destroy_graph_device(graph g_d)
     cudaFree(g_d.edge_vector);
 
     #ifdef DETAIL
-    printf("[DETAIL][FREE] node_vector and edge_vector of device destroyed\n");
+    fprintf(fileout, "[DETAIL][FREE] node_vector and edge_vector of device destroyed\n");
     #endif
 }
 
@@ -177,7 +179,7 @@ queue construct_queue_device_with_source(int max_size, int * source_p)
     cudaMemcpy(q_d.items, source_p, sizeof(int), cudaMemcpyHostToDevice); //TODO: test it
 
     #ifdef DETAIL
-    printf("[DETAIL][DEVICE] workset queue builed and first item added successfully\n");
+    fprintf(fileout, "[DETAIL][DEVICE] workset queue builed and first item added successfully\n");
     #endif
 
     return q_d;
@@ -188,6 +190,6 @@ void destroy_queue_device(queue q_d)
     cudaFree(q_d.items);
 
     #ifdef DETAIL
-    printf("[DETAIL][FREE] workset queue on device destroyed\n");
+    fprintf(fileout, "[DETAIL][FREE] workset queue on device destroyed\n");
     #endif
 }
