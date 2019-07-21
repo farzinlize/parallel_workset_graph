@@ -102,9 +102,9 @@ __global__ void one_bfs_T_BM(graph g, char * bitmap_mask, char * update, int lev
         for (int neighbour_id = 0 ; neighbour_id < neighbours_count; neighbour_id++)
         {
             int neighbour = g.edge_vector[node_neighbour_index + neighbour_id];
-            if (g.node_level_vector[neighbour] > level+1)
+            if (g.node_level_vector[neighbour] > level)
             {
-                g.node_level_vector[neighbour] = level + 1;
+                g.node_level_vector[neighbour] = level;
                 update[neighbour] = 1;
             }
         }
