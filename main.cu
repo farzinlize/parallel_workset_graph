@@ -80,9 +80,9 @@ void T_BM_bfs(graph g_h, int source)
     fprintf(fileout, "[DEBUG][T_BM_BFS] arrays successfully initialed on device\n");
     #endif
 
+    #ifndef DP
     /* bfs first move in butmap and level vector */
     //TODO: use cudaMemset instead of copy or a better way
-    #ifndef DP
     CUDA_CHECK_RETURN(cudaMemcpy(&bitmap_d[source], &one, sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK_RETURN(cudaMemcpy(&g_d.node_level_vector[source], &zero, sizeof(int), cudaMemcpyHostToDevice));
     #endif
