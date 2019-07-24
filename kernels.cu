@@ -196,3 +196,39 @@ __global__ void inital_int_array(int * array, int value, int size)
     if(tid < size)
         array[tid] = value;
 }
+
+/* ### ALL STEP BFS ### */
+__device__ int sum_array_one_thread(int * a_in, int size)
+{
+    int sum = a_in[0];
+    for(int i = 1 ; i < size ; i++)
+        sum += a_in[i];
+    return sum;
+}
+
+#ifdef DP
+__global__ void T_BM_bfs(graph g_d, int source, char * bitmap_mask, char * update, argument argument)
+{
+    int workset_size = 1;
+    int level = 0;
+    int shared_size = argument.add_block_size * sizeof(int);
+
+    bitmap_mask[source] = 1;
+    g_d.node_level_vector[source] = 0;
+    
+    while(workset_size != 0){
+        one_bfs_T_BM<<<argument.covering_block_count, argument.covering_block_size>>>(g_d, bitmap_mask, update, ++level);
+        workset_update_BM<<<argument.covering_block_count, argument.covering_block_size>>>(update, bitmap_mask);
+
+        if(argument.add_half_full_flag){
+            add_kernel_half<<<argument.add_block_count, argument.add_block_size, shared_size>>>(bitmap_mask, argument.add_result);
+        }else{
+            add_kernel_full<<<argument.add_block_count, argument.add_block_size, shared_size>>>(bitmap_mask, argument.add_result);
+        }
+
+        cudaDeviceSynchronize(); //wait for GPU
+
+        workset_size = sum_array_one_thread(argument.add_result, argument.add_block_count);
+    }
+}
+#endif

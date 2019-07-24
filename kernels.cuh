@@ -15,6 +15,19 @@
 		exit(1);															\
 	} }
 
+typedef struct argument
+{
+	/* covering kernel arguments */
+	int covering_block_count;
+	int covering_block_size;
+
+	/* reduction add kernel arguments */
+	int add_half_full_flag;
+	int add_block_count;
+	int add_block_size;
+	int * add_result;
+} argument;
+
 __global__ void one_bfs_B_QU(graph g, queue workset, char * update, int level);
 __global__ void one_bfs_B_BM(graph g, char * bitmap_mask, char * update, int level);
 __global__ void one_bfs_T_QU(graph g, queue workset, char * update, int level);
@@ -26,5 +39,7 @@ __global__ void add_kernel_half(char * a_in, int * out);
 __global__ void add_kernel_full(char * a_in, int * out);
 __global__ void inital_char_array(char * array, char value);
 __global__ void inital_int_array(int * array, int value, int size);
+
+__global__ void T_BM_bfs(graph g_d, int source, char * bitmap_mask, char * update, argument argument);
 
 #endif

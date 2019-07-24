@@ -3,6 +3,7 @@
 #include <limits.h>
 #include "structures.h"
 #include "sequential.h"
+#include "report.h"
 #include <limits.h>
 
 extern "C"{
@@ -13,47 +14,9 @@ extern "C"{
 #define COVERING_THREAD_PER_BLOCK 1024
 #define DATASET_COUNT 1
 
-FILE * fileout;
+extern FILE * fileout;
 
 const char * dataset_files[DATASET_COUNT][2] = {{"dataset/twitter-all.nodes", "dataset/twitter-all.edges"}};
-
-void make_compare_file(char * file_name, char * result_1_name, int * result_1, char * result_2_name, int * result_2, int size)
-{
-    FILE * result_file = fopen(file_name, "wb");
-    int max_level_1 = -1, max_level_2 = -1, fault_tree = 0, diffrenet = 0;
-    int nodes_in_level_result_1[20] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    int nodes_in_level_result_2[20] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    for(int i = 0; i<size; i++){
-        if(result_1[i] >= 20 || result_2[i] >= 20){
-            if((result_1[i] >= 20 && result_2[i] < 20) || (result_1[i] < 20 && result_2[i] >= 20))
-                fault_tree++;
-            fprintf(result_file, "node (is not in same tree): %d\t| %s level: %d\t| %s level: %d\n", i, result_1_name, result_1[i], result_2_name, result_2[i]);
-            continue;
-        }
-        if(result_1[i] != result_2[i])    diffrenet++;
-        if(result_1[i] > max_level_1)    max_level_1 = result_1[i];
-        if(result_2[i] > max_level_2)   max_level_2 = result_2[i];
-        nodes_in_level_result_1[result_1[i]]++;
-        nodes_in_level_result_2[result_2[i]]++;
-        fprintf(result_file, "node: %d\t| %s level: %d\t| %s level: %d\n", i, result_1_name, result_1[i], result_2_name, result_2[i]);
-    }
-    fprintf(result_file, "----------------------------------------\n");
-    fprintf(result_file, "max level in %s run: %d\nmax level in %s run: %d\n", result_1_name, max_level_1, result_2_name, max_level_2);
-    fprintf(result_file, "FAULT TREE --> %d\n", fault_tree);
-    fprintf(result_file, "NUMBER OF DIFFRENT (between two run) --> %d\n", diffrenet);
-    fprintf(result_file, "number of nodes in each level (%s)\n", result_1_name);
-    for(int i=0;i<max_level_1;i++)    fprintf(result_file, "level: %d\tnumber of nodes: %d\n", i, nodes_in_level_result_1[i]);
-    fprintf(result_file, "number of nodes in each level (%s)\n", result_2_name);
-    for(int i=0;i<max_level_2;i++)    fprintf(result_file, "level: %d\tnumber of nodes: %d\n", i, nodes_in_level_result_2[i]);
-    fclose(result_file);
-}
-
-void copy(int * a, int * b, int size)
-{
-    for(int i = 0; i < size ; i++){
-        b[i] = a[i];
-    }
-}
 
 int sum_array(int *a_in, int size)
 {
@@ -66,10 +29,14 @@ int sum_array(int *a_in, int size)
 void T_BM_bfs(graph g_h, int source)
 {
     /* necessary but not useful variables */
+    #ifndef DP
     int one = 1, zero = 0;
+    #endif
 
     /* set and define desicion variables */
+    #ifndef DP
     int level = 0, workset_size = 1;
+    #endif
     int covering_block_count = (g_h.size - 1)/COVERING_THREAD_PER_BLOCK + 1;
     int update_size = covering_block_count * COVERING_THREAD_PER_BLOCK;
 
@@ -83,8 +50,10 @@ void T_BM_bfs(graph g_h, int source)
         add_block_size = COVERING_THREAD_PER_BLOCK;
         add_block_count = covering_block_count/2;
     }
+    #ifndef DP
     int shared_size = add_block_size * sizeof(int);
     int * add_result_h = (int *)malloc(sizeof(int)*add_block_count);
+    #endif
 
     /* initial graph on device based on BFS */
     graph g_d = consturct_graph_device(g_h);
@@ -113,13 +82,16 @@ void T_BM_bfs(graph g_h, int source)
 
     /* bfs first move in butmap and level vector */
     //TODO: use cudaMemset instead of copy or a better way
+    #ifndef DP
     CUDA_CHECK_RETURN(cudaMemcpy(&bitmap_d[source], &one, sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK_RETURN(cudaMemcpy(&g_d.node_level_vector[source], &zero, sizeof(int), cudaMemcpyHostToDevice));
+    #endif
 
     #ifdef DEBUG
     fprintf(fileout, "[DEBUG][T_BM_BFS] first manual bfs move successfully done\n");
     #endif
 
+    #ifndef DP
     while(workset_size != 0){
         one_bfs_T_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(g_d, bitmap_d, update_d, ++level);
         workset_update_BM<<<covering_block_count, COVERING_THREAD_PER_BLOCK>>>(update_d, bitmap_d);
@@ -144,6 +116,20 @@ void T_BM_bfs(graph g_h, int source)
         fprintf(fileout, "[DEBUG][T_BM_BFS] workset_size = %d\n", workset_size);
         #endif
     }
+    #else
+    argument argument_d;
+    argument_d.covering_block_count = covering_block_count;
+    argument_d.covering_block_size = COVERING_THREAD_PER_BLOCK;
+    argument_d.add_half_full_flag = add_half_full_flag;
+    argument_d.add_block_count = add_block_count;
+    argument_d.add_block_size = add_block_size;
+    argument_d.add_result = add_result_d;
+
+    T_BM_bfs<<<1, 1>>>(g_d, source, bitmap_d, update_d, argument_d);
+
+    CUDA_CHECK_RETURN(cudaDeviceSynchronize()); //wait for GPU
+    CUDA_CHECK_RETURN(cudaGetLastError());
+    #endif
 
     /* return level array of graph to host */
     CUDA_CHECK_RETURN(cudaMemcpy(g_h.node_level_vector, g_d.node_level_vector, sizeof(int)*g_h.size, cudaMemcpyDeviceToHost));
@@ -160,7 +146,9 @@ void T_BM_bfs(graph g_h, int source)
     cudaFree(add_result_d);
 
     /* free memory CPU */
+    #ifndef DP
     free(add_result_h);
+    #endif
 }
 
 void adaptive_bfs(graph g_h, int source)
@@ -262,12 +250,7 @@ void adaptive_bfs(graph g_h, int source)
 #ifndef TEST
 int main(int argc, char * argv[])
 {
-    #ifdef DEBUG
-    fileout = fopen("out/ag_debug.out", "wb");
-    #else
-    fileout = fopen("out/ag.out", "wb");
-    #endif
-
+    initial_fileout();
     fprintf(fileout, "[MAIN] app.cu main\tDataset index: %d\n", DATASET_INDEX);
 
     /* read data set */
@@ -280,10 +263,9 @@ int main(int argc, char * argv[])
     fprintf(fileout, "[DEBUG][MAIN] running sequential bfs with graph size: %d\n", g_h.size);
     #endif
 
+    /* sequentinal run */
     set_clock();
-
     sequential_run_bfs_QU(&g_h, 0);
-
     double elapced = get_elapsed_time();
 
     fprintf(fileout, "[MAIN] returning sequential bfs, time: %.2f\n", elapced);
@@ -297,7 +279,7 @@ int main(int argc, char * argv[])
 
     /* Save sequential result for future use */
     int * sequential_result = (int *)malloc(sizeof(int)*g_h.size);
-    copy(g_h.node_level_vector, sequential_result, g_h.size);
+    memcpy(sequential_result, g_h.node_level_vector, sizeof(int)*g_h.size);
 
     #ifdef DEBUG
     fprintf(fileout, "[DEBUG] first 10 sequential result:\n");
@@ -306,10 +288,9 @@ int main(int argc, char * argv[])
     }
     #endif
 
+    /* parallel run (T_BM) */
     set_clock();
-
     T_BM_bfs(g_h, 0);
-
     elapced = get_elapsed_time();
 
     fprintf(fileout, "[MAIN] returning parallel (T_BM) bfs, time: %.2f\n", elapced);
@@ -321,8 +302,10 @@ int main(int argc, char * argv[])
     }
     #endif
 
+    /* make compare files */
     make_compare_file("out/compare_seq_TBM.out", "sequentinal", sequential_result, "T_BM", g_h.node_level_vector, g_h.size);
 
+    /* free allocated memory in main function */
     free(g_h.node_level_vector);
     destroy_graph(g_h);
 
@@ -330,45 +313,16 @@ int main(int argc, char * argv[])
 }
 #else
 
-__global__ void testKernel(queue * q)
-{
-    fprintf(fileout, "queue size at the beginning of kernel: %d\n", q->size);
-
-    for(int i=0;i<q->size;i++)
-        fprintf(fileout, "items id: %d\titem value: %d\n", i, q->items[i]);
-
-    q->size = 2;
-
-    fprintf(fileout, "queue size at the end of kernel: %d\n", q->size);
-}
-
 int main(int argc, char * argv[])
 {
-    fprintf(fileout, "[MAIN] test main at app.cu\tDataset index: %d\n", DATASET_INDEX);
+    int a[5] = {5, 3, 2, 1, 9};
+    int b[5];
 
-    queue * test;
-    fprintf(fileout, "1\n");
-    cudaMallocManaged(&test, sizeof(queue));
-    cudaMallocManaged(&test->items, sizeof(int)*20);
-    fprintf(fileout, "2\n");
-    test->items[0] = 85;
-    fprintf(fileout, "2.5\n");
-    test->items[1] = 95;
-    test->items[2] = 29;
-    test->items[3] = 55;
-    test->items[4] = 33;
+    memcpy(b, a, sizeof(a));
 
-    fprintf(fileout, "3\n");
-    test->size = 5;
-
-    fprintf(fileout, "4\n");
-    testKernel<<<1, 1>>>(test);
-
-    cudaDeviceSynchronize();
-    
-    fprintf(fileout, "queue size after kernel in main: %d\n", test->size);
-
-    cudaFree(test->items);
+    for(int i=0;i<5;i++){
+        printf("b[%d]=%d\t", i, b[i]);
+    }
 
     return 0;
 }
