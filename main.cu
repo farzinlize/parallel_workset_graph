@@ -5,6 +5,7 @@
 #include "sequential.h"
 #include "report.h"
 #include <limits.h>
+#include "nvgraph.h"
 
 extern "C"{
     #include "desicion_maker.h"
@@ -24,6 +25,62 @@ int sum_array(int *a_in, int size)
     for(int i = 1 ; i < size ; i++)
         sum += a_in[i];
     return sum;
+}
+
+void check_status(nvgraphStatus_t status){
+    if ((int)status != 0)    {
+        printf("ERROR : %d\n",status);
+        exit(0);
+    }
+}
+
+void nvGraph_bfs(graph g_h, int source)
+{
+    /* inital predecessors array */
+    g_h.node_predecessors_vector = (int *)malloc(sizeof(int)*g_h.size);
+
+    /* nvGraph variables */
+    const size_t vertex_numsets = 2;
+    nvgraphHandle_t handle;
+    nvgraphGraphDescr_t nvGraph;
+    nvgraphCSRTopology32I_t CSR_input;
+    cudaDataType_t* vertex_dimT;
+    size_t distances_index = 0;
+    size_t predecessors_index = 1;
+    vertex_dimT = (cudaDataType_t*)malloc(vertex_numsets*sizeof(cudaDataType_t));
+    vertex_dimT[distances_index] = CUDA_R_32I;
+    vertex_dimT[predecessors_index] = CUDA_R_32I;
+
+    //Creating nvgraph objects
+    check_status(nvgraphCreate (&handle));
+    check_status(nvgraphCreateGraphDescr (handle, &nvGraph));
+
+    // Set graph connectivity and properties (tranfers)
+    CSR_input = (nvgraphCSRTopology32I_t) malloc(sizeof(struct nvgraphCSCTopology32I_st));
+    CSR_input->nvertices = g_h.size;
+    CSR_input->nedges = g_h.node_vector[g_h.size];
+    CSR_input->source_offsets = g_h.node_vector;
+    CSR_input->destination_indices = g_h.edge_vector;
+    check_status(nvgraphSetGraphStructure(handle, nvGraph, (void*)CSR_input, NVGRAPH_CSR_32));
+    check_status(nvgraphAllocateVertexData(handle, nvGraph, vertex_numsets, vertex_dimT));
+
+    int source_vert = source;
+    //Setting the traversal parameters  
+    nvgraphTraversalParameter_t traversal_param;
+    nvgraphTraversalParameterInit(&traversal_param);
+    nvgraphTraversalSetDistancesIndex(&traversal_param, distances_index);
+    nvgraphTraversalSetPredecessorsIndex(&traversal_param, predecessors_index);
+    nvgraphTraversalSetUndirectedFlag(&traversal_param, false);
+    //Computing traversal using BFS algorithm
+    check_status(nvgraphTraversal(handle, nvGraph, NVGRAPH_TRAVERSAL_BFS, &source_vert, traversal_param));
+    check_status(nvgraphGetVertexData(handle, nvGraph, (void*)g_h.node_level_vector, distances_index));
+    check_status(nvgraphGetVertexData(handle, nvGraph, (void*)g_h.node_predecessors_vector, predecessors_index));
+
+    free(vertex_dimT);
+    free(CSR_input);
+    check_status(nvgraphDestroyGraphDescr (handle, nvGraph));
+    check_status(nvgraphDestroy (handle));
+    free(g_h.node_predecessors_vector);
 }
 
 void T_BM_bfs(graph g_h, int source)
@@ -290,7 +347,8 @@ int main(int argc, char * argv[])
 
     /* parallel run (T_BM) */
     set_clock();
-    T_BM_bfs(g_h, 0);
+    //T_BM_bfs(g_h, 0);
+    nvGraph_bfs(g_h, 0);
     elapced = get_elapsed_time();
 
     fprintf(fileout, "[MAIN] returning parallel (T_BM) bfs, time: %.2f\n", elapced);
@@ -304,6 +362,16 @@ int main(int argc, char * argv[])
 
     /* make compare files */
     make_compare_file("out/compare_seq_TBM.out", "sequentinal", sequential_result, "T_BM", g_h.node_level_vector, g_h.size);
+
+    /* nvGraph run */
+    set_clock();
+    nvGraph_bfs(g_h, 0);
+    elapced = get_elapsed_time();
+
+    fprintf(fileout, "[MAIN] returning nvGraph bfs, time: %.2f\n", elapced);
+
+    /* make compare files */
+    make_compare_file("out/compare_seq_NVG.out", "sequentinal", sequential_result, "nvGraph", g_h.node_level_vector, g_h.size);
 
     /* free allocated memory in main function */
     free(g_h.node_level_vector);
