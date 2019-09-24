@@ -10,11 +10,12 @@
 typedef struct graph
 {
     /* TODO: add MACRO for creating lightweight graph structre */
-    int * node_vector;          //number of nodes plus one for size of edges_vector
-    int * edge_vector;          //number of out-going edges
-    int * node_level_vector;    //used for BFS
-    int * node_distance_vector; //used for SSSP
-    int size;                   //number of nodes
+    int * node_vector;              //number of nodes plus one for size of edges_vector
+    int * edge_vector;              //number of out-going edges
+    int * node_level_vector;        //used for BFS
+    int * node_predecessors_vector; //used for BFS
+    int * node_distance_vector;     //used for SSSP
+    int size;                       //number of nodes
 } graph;
 
 /* host functions */

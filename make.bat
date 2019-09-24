@@ -1,6 +1,6 @@
 @echo off
 SETLOCAL
-SET version=2
+SET version=3
 SET dataset=0
 SET app_name=ag
 SET source=main.cu kernels.cu structures.cpp sequential.cpp desicion_maker.c fuzzy_timing.c report.cpp
@@ -15,6 +15,7 @@ if "%1" == "test" set __defines=%__defines% -DTEST
 if "%1" == "csr" set __defines=%__defines% -DCSR_VALIDATION
 if "%1" == "detail" set __defines=%__defines% -DDETAIL
 if "%1" == "dp" goto :dynamic_parallelism
+if "%1" == "nvGraph" goto :nvGraph
 if "%1" == "-dataset" goto :set_dataset
 if "%1" == "-name" goto :set_name
 shift
@@ -38,9 +39,15 @@ goto :loop_args
 
 :dynamic_parallelism
 shift
-set options=-arch=sm_35 -rdc=true -lcudadevrt
+set options=%options% -arch=sm_35 -rdc=true -lcudadevrt
 set __defines=%__defines% -DDP
 set app_name=ag_dp
+goto :loop_args
+
+:nvGraph
+shift
+set options=%options% -lnvgraph
+set __defines=%__defines% -DNVG
 goto :loop_args
 
 :clean
