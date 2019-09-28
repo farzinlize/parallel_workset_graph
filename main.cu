@@ -51,11 +51,11 @@ void nvGraph_bfs(graph g_h, int source)
     vertex_dimT[distances_index] = CUDA_R_32I;
     vertex_dimT[predecessors_index] = CUDA_R_32I;
 
-    //Creating nvgraph objects
+    /* Creating nvgraph objects */
     check_status(nvgraphCreate (&handle));
     check_status(nvgraphCreateGraphDescr (handle, &nvGraph));
 
-    // Set graph connectivity and properties (tranfers)
+    /* Set graph connectivity and properties (tranfers) */
     CSR_input = (nvgraphCSRTopology32I_t) malloc(sizeof(struct nvgraphCSCTopology32I_st));
     CSR_input->nvertices = g_h.size;
     CSR_input->nedges = g_h.node_vector[g_h.size];
@@ -64,18 +64,20 @@ void nvGraph_bfs(graph g_h, int source)
     check_status(nvgraphSetGraphStructure(handle, nvGraph, (void*)CSR_input, NVGRAPH_CSR_32));
     check_status(nvgraphAllocateVertexData(handle, nvGraph, vertex_numsets, vertex_dimT));
 
+    /* Setting the traversal parameters */
     int source_vert = source;
-    //Setting the traversal parameters  
     nvgraphTraversalParameter_t traversal_param;
     nvgraphTraversalParameterInit(&traversal_param);
     nvgraphTraversalSetDistancesIndex(&traversal_param, distances_index);
     nvgraphTraversalSetPredecessorsIndex(&traversal_param, predecessors_index);
     nvgraphTraversalSetUndirectedFlag(&traversal_param, false);
-    //Computing traversal using BFS algorithm
+
+    /* Computing traversal using BFS algorithm */
     check_status(nvgraphTraversal(handle, nvGraph, NVGRAPH_TRAVERSAL_BFS, &source_vert, traversal_param));
     check_status(nvgraphGetVertexData(handle, nvGraph, (void*)g_h.node_level_vector, distances_index));
     check_status(nvgraphGetVertexData(handle, nvGraph, (void*)g_h.node_predecessors_vector, predecessors_index));
 
+    /* Free allocated spaces */
     free(vertex_dimT);
     free(CSR_input);
     check_status(nvgraphDestroyGraphDescr (handle, nvGraph));
@@ -320,7 +322,7 @@ int main(int argc, char * argv[])
     fprintf(fileout, "[DEBUG][MAIN] running sequential bfs with graph size: %d\n", g_h.size);
     #endif
 
-    /* sequentinal run */
+    /* -------- sequentinal run -------- */
     set_clock();
     sequential_run_bfs_QU(&g_h, 0);
     double elapced = get_elapsed_time();
@@ -345,10 +347,9 @@ int main(int argc, char * argv[])
     }
     #endif
 
-    /* parallel run (T_BM) */
+    /* -------- parallel run (T_BM) -------- */
     set_clock();
-    //T_BM_bfs(g_h, 0);
-    nvGraph_bfs(g_h, 0);
+    T_BM_bfs(g_h, 0);
     elapced = get_elapsed_time();
 
     fprintf(fileout, "[MAIN] returning parallel (T_BM) bfs, time: %.2f\n", elapced);
@@ -363,7 +364,7 @@ int main(int argc, char * argv[])
     /* make compare files */
     make_compare_file("out/compare_seq_TBM.out", "sequentinal", sequential_result, "T_BM", g_h.node_level_vector, g_h.size);
 
-    /* nvGraph run */
+    /* -------- nvGraph run -------- */
     set_clock();
     nvGraph_bfs(g_h, 0);
     elapced = get_elapsed_time();
@@ -381,7 +382,7 @@ int main(int argc, char * argv[])
 }
 #else
 
-int main(int argc, char * argv[])
+int main(int argc, char * argv[]) //for tests
 {
     int a[5] = {5, 3, 2, 1, 9};
     int b[5];

@@ -112,7 +112,7 @@ __global__ void one_bfs_T_BM(graph g, char * bitmap_mask, char * update, int lev
 }
 
 /* ### ADD KERNELS ### */
-__global__ void add_kernel(char *a_in, int * out)
+__global__ void add_kernel(char *a_in, int * out) //deprecated
 {
 	extern __shared__ int a_s[];
 	unsigned int tid_block = threadIdx.x;
@@ -232,3 +232,31 @@ __global__ void T_BM_bfs(graph g_d, int source, char * bitmap_mask, char * updat
     }
 }
 #endif
+
+/* ### LINIEAR ALGEBRA KERNELS ### */
+__global__ void CSR_multiply(graph g_d, argument argument)
+{
+    /* usful names and variables */
+    int tid_in_block = threadIdx.x;
+    int tid_in_row = threadIdx.x blockIdx.y * blockDim.y;
+    int node_vector_index = blockIdx.x;
+    
+    /* each block save multiplier in its shared memory */
+    extern __shared__ int c_s[];
+    c_s[tid_in_block] = argument.multiplier_d[tid_in_block];
+
+    /* decode data to find out edge info */
+    int node = g_d.node_vector[node_vector_index];
+    int node_degree = g_d.node_vector[node_vector_index+1] - node_start;
+
+    /* check if edge exist */
+    if(tid_in_row < node_degree){
+        /* decode neighbour location and multiply edge wieght-    */
+        /* to multiplier element. consider 1 for all edges in BFS */
+        int edge_vector_index = node + tid_in_row;
+        int neighbour = g_d.edge_vector[edge_vector_index];
+        argument.m_result[edge_vector_index] = 1 * c_s[neighbour];
+    }
+
+    c_s[tid_in_block] = argument.m_result[] + argument.m_result[]
+}
