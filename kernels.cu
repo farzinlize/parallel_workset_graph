@@ -234,9 +234,9 @@ __global__ void T_BM_bfs(graph g_d, int source, char * bitmap_mask, char * updat
 #endif
 
 /* ### LINIEAR ALGEBRA KERNELS ### */
-__global__ void CSR_multiply(graph g_d, int * multiplier_d, int * working_array, int * result_vector)
+__global__ void CSR_multiply(graph g_d, int * multiplier_d, int * working_array, int * result_vector, int level)
 {
-    /* usful names and variables */
+    /* useful names and variables */
     int tid_in_block = threadIdx.x;
     int tid_in_row = threadIdx.x blockIdx.y * blockDim.x;
     int node_vector_index = blockIdx.x;
@@ -254,17 +254,18 @@ __global__ void CSR_multiply(graph g_d, int * multiplier_d, int * working_array,
 
     /* check if edge exist */
     if(tid_in_row < node_degree){
+
         /* decode neighbour location and multiply edge wieght-    */
         /* to multiplier element. consider 1 for all edges in BFS */
         int edge_vector_index = edge_vector_offset + tid_in_row;
         int neighbour = g_d.edge_vector[edge_vector_index];
-        working_array[edge_vector_index] = 1 * c_s[neighbour];
+        working_array[edge_vector_index] = c_s[neighbour]; // 1 * c_s[neighbour]
     }
 
     /* wait for all threads in block to write their result */
     __syncthreads();
 
-    /* reduction add in block: shared memory reused */
+    /* reduction add in block: reuse shared memory */
     if (tid_in_block < 512){
 
         /* check if is there a realated element in result array 512 position away */
@@ -293,7 +294,16 @@ __global__ void CSR_multiply(graph g_d, int * multiplier_d, int * working_array,
 
     __syncthreads();
 
-    if (blockIdx.y == 0){
-        result_vector[node_vector_index] = sum_array_one_thread(working_array, gridDim.y); // more potential parallelism
+    /* first thread of each block row */
+    if (blockIdx.y == 0 && tid_in_block == 0){
+        int result_vector_i = sum_array_one_thread(working_array, gridDim.y); // more potential parallelism
+
+        /* two condition for updating node level vector:                 */
+        /* 1- node level must remained untouch                           */
+        /* 2- result vector in node position should be anything but zero */
+        if(g_d.node_level_vector[node_vector_index] == -1 && result_vector_i != 0)
+            g_d.node_level_vector[node_vector_index] = level;
+
+        result_vector[node_vector_index] = result_vector_i;
     }
 }
