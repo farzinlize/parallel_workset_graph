@@ -5,6 +5,7 @@
 #include "sequential.h"
 #include "report.h"
 #include <limits.h>
+#include "linear_algebra.cuh"
 #include "nvgraph.h"
 
 extern "C"{
@@ -373,6 +374,17 @@ int main(int argc, char * argv[])
 
     /* make compare files */
     make_compare_file("out/compare_seq_NVG.out", "sequentinal", sequential_result, "nvGraph", g_h.node_level_vector, g_h.size);
+
+    /* -------- Linear Algebra run -------- */
+    set_clock();
+    linear_algebra_bfs(g_h, 0);
+    elapced = get_elapsed_time();
+
+    fprintf(fileout, "[MAIN] returning LinearAlgebra bfs, time: %.2f\n", elapced);
+
+    /* make compare files */
+    make_compare_file("out/compare_seq_LA.out", "sequentinal", sequential_result, "LinearAlgebra", g_h.node_level_vector, g_h.size);
+
 
     /* free allocated memory in main function */
     free(g_h.node_level_vector);

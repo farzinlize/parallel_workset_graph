@@ -42,6 +42,7 @@ __global__ void inital_int_array(int * array, int value, int size);
 
 __global__ void T_BM_bfs(graph g_d, int source, char * bitmap_mask, char * update, argument argument);
 
-__global__ void CSR_multiply(graph g_d, int * multiplier_d, int * working_array, int * result_vector);
+__global__ void linear_algebra_bfs(graph g_d, int source, int * multiplier_d, int * working_array, argument_la argument);
+__global__ void CSR_multiply_one_BFS(graph g_d, int * multiplier_d, int * working_array, int * result_vector, int level);
 
 #endif
