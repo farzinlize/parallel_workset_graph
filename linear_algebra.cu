@@ -1,22 +1,13 @@
 #include "linear_algebra.cuh"
 
-__device__ void warpReduce(volatile int* sdata, int tid)
-{
-	sdata[tid] += sdata[tid + 32];
-	sdata[tid] += sdata[tid + 16];
-	sdata[tid] += sdata[tid + 8];
-	sdata[tid] += sdata[tid + 4];
-	sdata[tid] += sdata[tid + 2];
-	sdata[tid] += sdata[tid + 1];
-}
-
 /* ### LINIEAR ALGEBRA KERNELS ### */
 __global__ void linear_algebra_bfs(graph g_d, int source, int * multiplier_d, int ** working_array, argument_la argument)
 {
     int level = 0;
     multiplier_d[source] = 1;
 
-    for(int i=0;i<argument_la.max_depth;i++){
+    int i=0;
+    for(i=0 ; i < argument.max_depth ; i++){
         CSR_multiply_one_BFS<<<argument.grid_dim, argument.block_dim, argument.shared_size>>>(g_d, multiplier_d, working_array, ++level);
         cudaDeviceSynchronize(); //wait for result
     }
@@ -34,7 +25,7 @@ __global__ void CSR_multiply_one_BFS(graph g_d, int * multiplier_d, int ** worki
 
     /* decode data to find out edge info */
     int edge_vector_offset = g_d.node_vector[node_vector_index];
-    int node_degree = g_d.node_vector[node_vector_index+1] - node_start;
+    int node_degree = g_d.node_vector[node_vector_index+1] - edge_vector_offset;
 
     /* sync loading to shared memory */
     __syncthreads();
@@ -58,12 +49,13 @@ __global__ void CSR_multiply_one_BFS(graph g_d, int * multiplier_d, int ** worki
     if (tid_in_block < 512){
 
         /* check if is there a realated element in shared memory 512 position away */
-        if (tid_in_row+512 < node_degree)
-            c_s[tid_in_block] = c_s[tid_in_block] + c_s[tid_in_block + 512];; // blockDim.x/2 = 512
-        
+        if (tid_in_row+512 < node_degree){
+            c_s[tid_in_block] = c_s[tid_in_block] + c_s[tid_in_block + 512]; // blockDim.x/2 = 512
+        }
         /* check for related data at current position (if isn't there, load 0 in shared memory) */
-        else if(tid_in_row >= node_degree)
+        else if(tid_in_row >= node_degree){
             c_s[tid_in_block] = 0; //not neccessery job issue IMPORTANT
+        }
     }
 
     /* wait for first reduction move */
@@ -96,15 +88,17 @@ __global__ void CSR_multiply_one_BFS(graph g_d, int * multiplier_d, int ** worki
 /* ### MAIN ### */
 void linear_algebra_bfs(graph g_h, int source)
 {
+    int maximum_threads_in_block = 1024;
+
     /* initial graph on device based on BFS */
     graph g_d = consturct_graph_device(g_h);
     CUDA_CHECK_RETURN(cudaMalloc((void **)&(g_d.node_level_vector), sizeof(int)*g_h.size));
     CUDA_CHECK_RETURN(cudaMemset(g_d.node_level_vector, -1, sizeof(int)*g_h.size)); // dose it works?
 
     /*  */
-    int covering_block_count = (g_h.size - 1)/COVERING_THREAD_PER_BLOCK + 1;
+    int covering_block_count = (g_h.size - 1)/maximum_threads_in_block + 1;
     dim3 grid_dim(g_h.size, covering_block_count, 1);
-    dim3 block_dim(COVERING_THREAD_PER_BLOCK, 1, 1);
+    dim3 block_dim(maximum_threads_in_block, 1, 1);
 
     /* initial GPU arrays */
     int * multiplier_d;
@@ -122,11 +116,11 @@ void linear_algebra_bfs(graph g_h, int source)
     argument_la argument_d;
     argument_d.grid_dim = grid_dim;
     argument_d.block_dim = block_dim;
-    argument_d.shared_size = COVERING_THREAD_PER_BLOCK * sizeof(int);
+    argument_d.shared_size = maximum_threads_in_block * sizeof(int);
     argument_d.max_depth = 10;
 
     /* call DP kernel */
-    linear_algebra_bfs(g_d, source, multiplier_d, working_array, argument_la argument);
+    linear_algebra_bfs<<<1, 1>>>(g_d, source, multiplier_d, working_array, argument_d);
 
     /* free memory */
     destroy_graph_device(g_d);
