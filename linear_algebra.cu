@@ -146,7 +146,7 @@ void linear_algebra_bfs(graph g_h, int source)
     CUDA_CHECK_RETURN(cudaMemcpy(&multiplier_d[source], &one, sizeof(int), cudaMemcpyHostToDevice));
     #endif
 
-    #ifdef TEST
+    #ifdef DETAIL
     int * multiplier_h = (int *)malloc(sizeof(int) * g_h.size);
     #endif
 
@@ -164,7 +164,7 @@ void linear_algebra_bfs(graph g_h, int source)
     int level = 0;
 
         /* test in non-DP mode */
-        #ifdef TEST
+        #ifdef DETAIL
         FILE * mult_report;
         mult_report = fopen("out/mult_report.out", "wb");
         int j;
@@ -179,8 +179,7 @@ void linear_algebra_bfs(graph g_h, int source)
         CUDA_CHECK_RETURN(cudaDeviceSynchronize());
         printf("done\n");
 
-        #ifdef TEST
-        CUDA_CHECK_RETURN(cudaDeviceSynchronize());
+        #ifdef DETAIL
         /* check for multiply result each step for test */
         CUDA_CHECK_RETURN(cudaMemcpy(multiplier_h, multiplier_d, sizeof(int)*g_h.size, cudaMemcpyDeviceToHost));
 
@@ -193,9 +192,8 @@ void linear_algebra_bfs(graph g_h, int source)
     }
     #else
     linear_algebra_bfs_dp<<<1, 1>>>(g_d, source, multiplier_d, working_array, argument_d);
-    #endif
-
     CUDA_CHECK_RETURN(cudaDeviceSynchronize());
+    #endif
 
     /* return level array of graph to host */
     CUDA_CHECK_RETURN(cudaMemcpy(g_h.node_level_vector, g_d.node_level_vector, sizeof(int)*g_h.size, cudaMemcpyDeviceToHost));
@@ -204,7 +202,7 @@ void linear_algebra_bfs(graph g_h, int source)
     destroy_graph_device(g_d);
     cudaFree(g_d.node_level_vector);
     cudaFree(multiplier_d);
-    #ifdef TEST
+    #ifdef DETAIL
     free(multiplier_h);
     fclose(mult_report);
     #endif
