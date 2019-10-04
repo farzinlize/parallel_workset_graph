@@ -23,6 +23,8 @@ shift
 if NOT "%~1"=="" goto :loop_args
 
 :command
+echo clean out
+del /Q out\*
 echo %source% %__defines% %options%
 nvcc -o build/%app_name%_%version%.exe %source% %options% %__defines% -DDATASET_INDEX=%dataset% -DVERSION=%version%
 ENDLOCAL
