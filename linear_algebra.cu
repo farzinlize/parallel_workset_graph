@@ -94,18 +94,20 @@ __global__ void result_and_BFS(graph g_d, int * multiplier_d, int * working_arra
     /* each thread are resposible of one result index */
     int node_vector_index = threadIdx.x + blockDim.x * blockIdx.x;
 
-    int result_vector_i = sum_1d2d(working_array, node_vector_index * block_count_y, (node_vector_index+1) * block_count_y); // more potential parallelism
+    if(node_vector_index < g_d.size){
+        int result_vector_i = sum_1d2d(working_array, node_vector_index * block_count_y, (node_vector_index+1) * block_count_y); // more potential parallelism
 
-    /* two condition for updating node level vector:                 */
-    /* 1- node level must remained untouch                           */
-    /* 2- result vector in node position should be anything but zero */
-    if(g_d.node_level_vector[node_vector_index] == -1 && result_vector_i != 0)
-        g_d.node_level_vector[node_vector_index] = level;
+        /* two condition for updating node level vector:                 */
+        /* 1- node level must remained untouch                           */
+        /* 2- result vector in node position should be anything but zero */
+        if(g_d.node_level_vector[node_vector_index] == -1 && result_vector_i != 0)
+            g_d.node_level_vector[node_vector_index] = level;
     
-    if(result_vector_i != 0)
-        multiplier_d[node_vector_index] = 1; // rewrite on multiplier_d for next round
-    else
-        multiplier_d[node_vector_index] = 0; // rewrite on multiplier_d for next round
+        if(result_vector_i != 0)
+            multiplier_d[node_vector_index] = 1; // rewrite on multiplier_d for next round
+        else
+            multiplier_d[node_vector_index] = 0; // rewrite on multiplier_d for next round
+    }
 }
 
 /* ### MAIN ### */
@@ -173,8 +175,12 @@ void linear_algebra_bfs(graph g_h, int source)
         CSR_multiply_reductionAdd<<<grid_dim_mult, block_dim_mult, (maximum_threads_in_block*sizeof(int))>>>(g_d, multiplier_d, working_array);
         result_and_BFS<<<grid_dim_result, block_dim_result>>>(g_d, multiplier_d, working_array, covering_block_count, ++level);
 
+        printf("multiply number operating: %d |\t", i);
         CUDA_CHECK_RETURN(cudaDeviceSynchronize());
+        printf("done\n");
+
         #ifdef TEST
+        CUDA_CHECK_RETURN(cudaDeviceSynchronize());
         /* check for multiply result each step for test */
         CUDA_CHECK_RETURN(cudaMemcpy(multiplier_h, multiplier_d, sizeof(int)*g_h.size, cudaMemcpyDeviceToHost));
 
@@ -189,6 +195,8 @@ void linear_algebra_bfs(graph g_h, int source)
     linear_algebra_bfs_dp<<<1, 1>>>(g_d, source, multiplier_d, working_array, argument_d);
     #endif
 
+    CUDA_CHECK_RETURN(cudaDeviceSynchronize());
+
     /* return level array of graph to host */
     CUDA_CHECK_RETURN(cudaMemcpy(g_h.node_level_vector, g_d.node_level_vector, sizeof(int)*g_h.size, cudaMemcpyDeviceToHost));
 
@@ -198,6 +206,7 @@ void linear_algebra_bfs(graph g_h, int source)
     cudaFree(multiplier_d);
     #ifdef TEST
     free(multiplier_h);
+    fclose(mult_report);
     #endif
     cudaFree(working_array);
 }
