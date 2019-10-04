@@ -103,10 +103,12 @@ __global__ void result_and_BFS(graph g_d, int * multiplier_d, int * working_arra
         if(g_d.node_level_vector[node_vector_index] == -1 && result_vector_i != 0)
             g_d.node_level_vector[node_vector_index] = level;
     
+        /* rewrite on multiplier_d for next round                     */
+        /* ignore exact result by replacing 1 for any non-zero result */
         if(result_vector_i != 0)
-            multiplier_d[node_vector_index] = 1; // rewrite on multiplier_d for next round
+            multiplier_d[node_vector_index] = 1;
         else
-            multiplier_d[node_vector_index] = 0; // rewrite on multiplier_d for next round
+            multiplier_d[node_vector_index] = 0;
     }
 }
 
