@@ -56,4 +56,15 @@ void make_compare_file(char * file_name, char * result_1_name, int * result_1, c
     fprintf(result_file, "number of nodes in each level (%s)\n", result_2_name);
     for(int i=0;i<max_level_2;i++)    fprintf(result_file, "level: %d\tnumber of nodes: %d\n", i, nodes_in_level_result_2[i]);
     fclose(result_file);
+
+    /* brif summery */
+    printf("----------------------------------------\n");
+    printf("max level in %s run: %d\nmax level in %s run: %d\n", result_1_name, max_level_1, result_2_name, max_level_2);
+    printf("FAULT TREE --> %d\n", fault_tree);
+    printf("NUMBER OF DIFFRENT (between two run) --> %d\n", diffrenet);
+    printf("number of nodes in each level (%s)\n", result_1_name);
+    for(int i=0;i<max_level_1;i++)    printf("level: %d\tnumber of nodes: %d\n", i, nodes_in_level_result_1[i]);
+    printf("number of nodes in each level (%s)\n", result_2_name);
+    for(int i=0;i<max_level_2;i++)    printf("level: %d\tnumber of nodes: %d\n", i, nodes_in_level_result_2[i]);
+    fclose(result_file);
 }
