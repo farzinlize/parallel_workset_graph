@@ -17,8 +17,13 @@ typedef struct argument_la
     int max_depth;
 } argument_la;
 
+#ifdef DP
+__global__ void linear_algebra_bfs_dp(graph g_d, int source, int * multiplier_d, int * working_array, argument_la argument);
+#endif
+
+__global__ void CSR_multiply_reductionAdd(graph g_d, int * multiplier_d, int * working_array);
+__global__ void result_and_BFS(graph g_d, int * multiplier_d, int * working_array, int block_count_y, int level);
+
 void linear_algebra_bfs(graph g_h, int source);
-__global__ void linear_algebra_bfs(graph g_d, int source, int * multiplier_d, int ** working_array, argument_la argument);
-__global__ void CSR_multiply_one_BFS(graph g_d, int * multiplier_d, int ** working_array, int level);
 
 #endif
