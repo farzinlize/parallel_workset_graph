@@ -100,7 +100,7 @@ __global__ void result_and_BFS(graph g_d, int * multiplier_d, int * working_arra
         /* two condition for updating node level vector:                 */
         /* 1- node level must remained untouch                           */
         /* 2- result vector in node position should be anything but zero */
-        if(g_d.node_level_vector[node_vector_index] == -1 && result_vector_i != 0)
+        if(result_vector_i != 0 && g_d.node_level_vector[node_vector_index] == -1)
             g_d.node_level_vector[node_vector_index] = level;
     
         /* rewrite on multiplier_d for next round                     */
