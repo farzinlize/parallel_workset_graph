@@ -14,11 +14,11 @@ extern "C"{
 }
 
 #define COVERING_THREAD_PER_BLOCK 1024
-#define DATASET_COUNT 1
+#define DATASET_COUNT 2
 
 extern FILE * fileout;
 
-const char * dataset_files[DATASET_COUNT][2] = {{"dataset/twitter-all.nodes", "dataset/twitter-all.edges"}};
+const char * dataset_files[DATASET_COUNT][2] = {{"dataset/twitter-all.nodes", "dataset/twitter-all.edges"}, {"dataset/test1.nodes", "dataset/test1.edges"}};
 
 int sum_array(int *a_in, int size)
 {
@@ -28,6 +28,7 @@ int sum_array(int *a_in, int size)
     return sum;
 }
 
+#ifdef NVG
 void check_status(nvgraphStatus_t status){
     if ((int)status != 0)    {
         printf("ERROR : %d\n",status);
@@ -85,6 +86,7 @@ void nvGraph_bfs(graph g_h, int source)
     check_status(nvgraphDestroy (handle));
     free(g_h.node_predecessors_vector);
 }
+#endif
 
 void T_BM_bfs(graph g_h, int source)
 {
@@ -310,6 +312,12 @@ void adaptive_bfs(graph g_h, int source)
 #ifndef TEST
 int main(int argc, char * argv[])
 {
+    int source;
+    if(argc == 1){source = 0;}
+    if(argc == 2){
+        source = atoi(argv[1]);
+    }
+
     initial_fileout();
     fprintf(fileout, "[MAIN] app.cu main\tDataset index: %d\n", DATASET_INDEX);
 
@@ -325,7 +333,7 @@ int main(int argc, char * argv[])
 
     /* -------- sequentinal run -------- */
     set_clock();
-    sequential_run_bfs_QU(&g_h, 0);
+    sequential_run_bfs_QU(&g_h, source);
     double elapced = get_elapsed_time();
 
     fprintf(fileout, "[MAIN] returning sequential bfs, time: %.2f\n", elapced);
@@ -348,9 +356,13 @@ int main(int argc, char * argv[])
     }
     #endif
 
+    /* clear result */
+    memset(g_h.node_level_vector, 0, sizeof(int)*g_h.size);
+
+    #ifdef TBM_SEPERATE
     /* -------- parallel run (T_BM) -------- */
     set_clock();
-    T_BM_bfs(g_h, 0);
+    T_BM_bfs(g_h, source);
     elapced = get_elapsed_time();
 
     fprintf(fileout, "[MAIN] returning parallel (T_BM) bfs, time: %.2f\n", elapced);
@@ -365,9 +377,14 @@ int main(int argc, char * argv[])
     /* make compare files */
     make_compare_file("out/compare_seq_TBM.out", "sequentinal", sequential_result, "T_BM", g_h.node_level_vector, g_h.size);
 
+    /* clear result */
+    memset(g_h.node_level_vector, 0, sizeof(int)*g_h.size);
+    #endif
+
+    #ifdef NVG
     /* -------- nvGraph run -------- */
     set_clock();
-    nvGraph_bfs(g_h, 0);
+    nvGraph_bfs(g_h, source);
     elapced = get_elapsed_time();
 
     fprintf(fileout, "[MAIN] returning nvGraph bfs, time: %.2f\n", elapced);
@@ -375,9 +392,13 @@ int main(int argc, char * argv[])
     /* make compare files */
     make_compare_file("out/compare_seq_NVG.out", "sequentinal", sequential_result, "nvGraph", g_h.node_level_vector, g_h.size);
 
+    /* clear result */
+    memset(g_h.node_level_vector, 0, sizeof(int)*g_h.size);
+    #endif
+
     /* -------- Linear Algebra run -------- */
     set_clock();
-    linear_algebra_bfs(g_h, 0);
+    linear_algebra_bfs(g_h, source);
     elapced = get_elapsed_time();
 
     fprintf(fileout, "[MAIN] returning LinearAlgebra bfs, time: %.2f\n", elapced);
@@ -396,14 +417,48 @@ int main(int argc, char * argv[])
 
 int main(int argc, char * argv[]) //for tests
 {
-    int a[5] = {5, 3, 2, 1, 9};
-    int b[5];
-
-    memcpy(b, a, sizeof(a));
-
-    for(int i=0;i<5;i++){
-        printf("b[%d]=%d\t", i, b[i]);
+    int source;
+    if(argc == 1){source = 0;}
+    if(argc == 2){
+        source = atoi(argv[1]);
     }
+
+    initial_fileout();
+    fprintf(fileout, "[MAIN] app.cu main\tDataset index: %d\n", DATASET_INDEX);
+
+    /* read data set */
+    graph g_h = consturct_graph(dataset_files[DATASET_INDEX][0], dataset_files[DATASET_INDEX][1]);
+
+    /* initial bfs arrays */
+    g_h.node_level_vector = (int *)malloc(sizeof(int)*g_h.size);
+
+    /* -------- sequentinal run -------- */
+    set_clock();
+    sequential_run_bfs_QU(&g_h, source);
+    double elapced = get_elapsed_time();
+
+    fprintf(fileout, "[MAIN] returning sequential bfs, time: %.2f\n", elapced);
+
+    /* Save sequential result for future use */
+    int * sequential_result = (int *)malloc(sizeof(int)*g_h.size);
+    memcpy(sequential_result, g_h.node_level_vector, sizeof(int)*g_h.size);
+
+    /* clear result */
+    memset(g_h.node_level_vector, 0, sizeof(int)*g_h.size);
+
+    /* -------- Linear Algebra run -------- */
+    set_clock();
+    linear_algebra_bfs(g_h, source);
+    elapced = get_elapsed_time();
+
+    fprintf(fileout, "[MAIN] returning LinearAlgebra bfs, time: %.2f\n", elapced);
+
+    /* make compare files */
+    make_compare_file("out/compare_seq_LA.out", "sequentinal", sequential_result, "LinearAlgebra", g_h.node_level_vector, g_h.size);
+
+    /* free allocated memory in main function */
+    free(g_h.node_level_vector);
+    destroy_graph(g_h);
 
     return 0;
 }
