@@ -14,6 +14,7 @@ if "%1" == "debug" set __defines=%__defines% -DDEBUG
 if "%1" == "test" set __defines=%__defines% -DTEST
 if "%1" == "csr" set __defines=%__defines% -DCSR_VALIDATION
 if "%1" == "detail" set __defines=%__defines% -DDETAIL
+if "%1" == "tbm" set __defines=%__defines% -DTBM_SEPERATE
 if "%1" == "dp" goto :dynamic_parallelism
 if "%1" == "nvGraph" goto :nvGraph
 if "%1" == "-dataset" goto :set_dataset
