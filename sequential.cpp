@@ -48,3 +48,18 @@ void sequential_run_bfs_QU(graph * g, int root)
         workset = sequential_one_bfs_QU(g, workset, level++);
     }
 }
+
+void sequential_csr_mult(graph g, int * vector, int * result)
+{
+    for(int row = 0; row < g.size; row++){
+        int dot = 0;
+        int start = g.node_vector[row];
+        int end = g.node_vector[row+1];
+        for(int edge_inedx = start; edge_inedx < end; edge_inedx++){
+            if(vector[g.edge_vector[edge_inedx]] != 0)
+                fprintf(fileout, "[SEQ] non-zero at %d (row = %d)\n", edge_inedx, row);
+            dot += vector[g.edge_vector[edge_inedx]];
+        }
+        result[row] = dot;
+    }
+}
