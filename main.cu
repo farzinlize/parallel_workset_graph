@@ -424,7 +424,7 @@ int main(int argc, char * argv[]) //for tests
     }
 
     initial_fileout();
-    fprintf(fileout, "[MAIN] app.cu main\tDataset index: %d\n", DATASET_INDEX);
+    fprintf(fileout, "[MAIN][TEST] app.cu test main\tDataset index: %d\n", DATASET_INDEX);
 
     /* read data set */
     graph g_h = consturct_graph(dataset_files[DATASET_INDEX][0], dataset_files[DATASET_INDEX][1]);
@@ -432,29 +432,31 @@ int main(int argc, char * argv[]) //for tests
     /* initial bfs arrays */
     g_h.node_level_vector = (int *)malloc(sizeof(int)*g_h.size);
 
-    /* -------- sequentinal run -------- */
-    set_clock();
-    sequential_run_bfs_QU(&g_h, source);
-    double elapced = get_elapsed_time();
+    int * multiplier = (int *)malloc(sizeof(int)*g_h.size);
+    int * mult_result = (int *)malloc(sizeof(int)*g_h.size);
 
-    fprintf(fileout, "[MAIN] returning sequential bfs, time: %.2f\n", elapced);
+    memset(multiplier, 0, sizeof(int)*g_h.size);
+    multiplier[source] = 1;
 
-    /* Save sequential result for future use */
-    int * sequential_result = (int *)malloc(sizeof(int)*g_h.size);
-    memcpy(sequential_result, g_h.node_level_vector, sizeof(int)*g_h.size);
+    FILE * mult_report;
+    mult_report = fopen("out/mult_report_seq.out", "wb");
 
-    /* clear result */
-    memset(g_h.node_level_vector, 0, sizeof(int)*g_h.size);
+    fprintf(mult_report, "pre product\n[");
+    for(int j=0;j<g_h.size;j++){
+        fprintf(mult_report, "%d\t", multiplier[j]);
+    }
+    fprintf(mult_report, "]\n");
 
-    /* -------- Linear Algebra run -------- */
-    set_clock();
-    linear_algebra_bfs(g_h, source);
-    elapced = get_elapsed_time();
+    for(int i=0;i<1;i++){
+        sequential_csr_mult(g_h, multiplier, mult_result);
+        memcpy(multiplier, mult_result, sizeof(int)*g_h.size);
 
-    fprintf(fileout, "[MAIN] returning LinearAlgebra bfs, time: %.2f\n", elapced);
-
-    /* make compare files */
-    make_compare_file("out/compare_seq_LA.out", "sequentinal", sequential_result, "LinearAlgebra", g_h.node_level_vector, g_h.size);
+        fprintf(mult_report, "index = %d\n[", i);
+        for(int j=0;j<g_h.size;j++){
+            fprintf(mult_report, "%d\t", multiplier[j]);
+        }
+        fprintf(mult_report, "]\n");
+    }
 
     /* free allocated memory in main function */
     free(g_h.node_level_vector);
