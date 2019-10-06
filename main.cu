@@ -398,7 +398,7 @@ int main(int argc, char * argv[])
 
     /* -------- Linear Algebra run -------- */
     set_clock();
-    linear_algebra_bfs(g_h, source);
+    linear_algebra_bfs_v1(g_h, source);
     elapced = get_elapsed_time();
 
     fprintf(fileout, "[MAIN] returning LinearAlgebra bfs, time: %.2f\n", elapced);
