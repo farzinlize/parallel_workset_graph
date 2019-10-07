@@ -25,6 +25,6 @@ __global__ void CSR_multiply_reductionAdd(graph g_d, int * multiplier_d, int * w
 __global__ void result_and_BFS(graph g_d, int * multiplier_d, int * working_array, int block_count_y, int level);
 
 void linear_algebra_bfs(graph g_h, int source);
-void linear_algebra_bfs_v1(graph g_h, int source);
+void linear_algebra_bfs_scalar(graph g_h, int source);
 
 #endif

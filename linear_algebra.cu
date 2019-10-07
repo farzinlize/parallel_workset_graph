@@ -148,7 +148,7 @@ __global__ void set_result (graph g_d, int * multiplier_d, int * working_array)
 }
 
 /* ### MAIN ### */
-void linear_algebra_bfs_v1(graph g_h, int source)
+void linear_algebra_bfs_scalar(graph g_h, int source)
 {
     /* define useful variables */
     int maximum_threads_in_block = 1024;
