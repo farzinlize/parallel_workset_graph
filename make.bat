@@ -1,9 +1,9 @@
 @echo off
 SETLOCAL
-SET version=3
+SET version=4
 SET dataset=0
 SET app_name=ag
-SET source=main.cu kernels.cu linear_algebra.cu structures.cpp sequential.cpp desicion_maker.c fuzzy_timing.c report.cpp
+SET source=main.cu kernels.cu linear_algebra.cu linear_algebra_main.cu structures.cpp sequential.cpp desicion_maker.c fuzzy_timing.c report.cpp
 SET options=
 SET __defines=-DWINDOWS
 if "%~1" == "" goto :command
