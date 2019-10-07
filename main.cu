@@ -14,11 +14,11 @@ extern "C"{
 }
 
 #define COVERING_THREAD_PER_BLOCK 1024
-#define DATASET_COUNT 2
+#define DATASET_COUNT 3
 
 extern FILE * fileout;
 
-const char * dataset_files[DATASET_COUNT][2] = {{"dataset/twitter-all.nodes", "dataset/twitter-all.edges"}, {"dataset/test1.nodes", "dataset/test1.edges"}};
+const char * dataset_files[DATASET_COUNT][2] = {{"dataset/HR.nodes", "dataset/HR.edges"}, {"dataset/twitter-all.nodes", "dataset/twitter-all.edges"}, {"dataset/test1.nodes", "dataset/test1.edges"}};
 
 int sum_array(int *a_in, int size)
 {
