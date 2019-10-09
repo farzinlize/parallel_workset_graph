@@ -20,5 +20,6 @@ __global__ void CSR_multiply_reductionAdd(graph g_d, int * multiplier_d, int * w
 __global__ void result_and_BFS(graph g_d, int * multiplier_d, int * working_array, int block_count_y, int level);
 __global__ void spmv_csr_scalar_kernel (graph g_d, int * multiplier_d, int * working_array, int level);
 __global__ void set_result (graph g_d, int * multiplier_d, int * working_array);
+__global__ void spmv_csr_vector_kernel (graph g_d, int * multiplier_d, int * working_array, int level);
 
 #endif

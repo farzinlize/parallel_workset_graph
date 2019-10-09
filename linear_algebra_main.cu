@@ -1,6 +1,82 @@
 #include "linear_algebra_main.cuh"
 
 /* ### MAIN ### */
+void linear_algebra_bfs_vector(graph g_h, int source)
+{
+    /* define useful variables */
+    int maximum_threads_in_block = 1024;
+    int one = 1, zero = 0, max_depth = 10;
+
+    /* initial graph on device based on BFS */
+    graph g_d = consturct_graph_device(g_h);
+    CUDA_CHECK_RETURN(cudaMalloc((void **)&(g_d.node_level_vector), sizeof(int)*g_h.size));
+    CUDA_CHECK_RETURN(cudaMemset(g_d.node_level_vector, -1, sizeof(int)*g_h.size));
+
+    /* set source node level to zero */
+    CUDA_CHECK_RETURN(cudaMemcpy(&g_d.node_level_vector[source], &zero, sizeof(int), cudaMemcpyHostToDevice));
+
+    /* kernel grids configuration variables */
+    int covering_block_count = (g_h.size - 1)/maximum_threads_in_block + 1;
+    int covering_nlock_count_for_warps = covering_block_count * 32;
+    dim3 grid_dim_thread(covering_block_count, 1, 1);
+    dim3 grid_dim_warp(covering_nlock_count_for_warps, 1, 1);
+    dim3 block_dim(maximum_threads_in_block, 1, 1);
+
+    /* set shared memory size */
+    int shared_size = sizeof(int) * maximum_threads_in_block;
+
+    /* initial GPU arrays */
+    int * multiplier_d;
+    int * working_array;
+    CUDA_CHECK_RETURN(cudaMalloc((void **)&(multiplier_d), sizeof(int)*g_h.size));
+    CUDA_CHECK_RETURN(cudaMemset(multiplier_d, 0, sizeof(int)*g_h.size));
+    CUDA_CHECK_RETURN(cudaMalloc((void **)&(working_array), sizeof(int)*g_h.size));
+
+    /* set first multiplier vector */
+    CUDA_CHECK_RETURN(cudaMemcpy(&multiplier_d[source], &one, sizeof(int), cudaMemcpyHostToDevice));
+
+    #ifdef DETAIL
+    FILE * mult_report;
+    mult_report = fopen("out/mult_report.out", "wb");
+    int * multiplier_h = (int *)malloc(sizeof(int) * g_h.size);
+    int j;
+
+    CUDA_CHECK_RETURN(cudaMemcpy(multiplier_h, multiplier_d, sizeof(int)*g_h.size, cudaMemcpyDeviceToHost));
+
+    fprintf(mult_report, "pre product\n[");
+    for(j=0;j<g_h.size;j++){
+        fprintf(mult_report, "%d\t", multiplier_h[j]);
+    }
+    fprintf(mult_report, "]\n");
+    #endif
+
+    /* Kernel */
+    int level = 0;
+    for(int i=0;i<max_depth;i++){
+        spmv_csr_vector_kernel<<<grid_dim_warp, block_dim, shared_size>>>(g_d, multiplier_d, working_array, ++level);
+        set_result<<<grid_dim_thread, block_dim>>>(g_d, multiplier_d, working_array);
+
+        #ifdef DEBUG
+        printf("multiply number %d operating |\t", i);
+        #endif
+        CUDA_CHECK_RETURN(cudaDeviceSynchronize());
+        #ifdef DEBUG
+        printf("done\n");
+        #endif
+
+        #ifdef DETAIL
+        /* check for multiply result each step for test */
+        CUDA_CHECK_RETURN(cudaMemcpy(multiplier_h, multiplier_d, sizeof(int)*g_h.size, cudaMemcpyDeviceToHost));
+
+        fprintf(mult_report, "index = %d\n[", i);
+        for(j=0;j<g_h.size;j++){
+            fprintf(mult_report, "%d\t", multiplier_h[j]);
+        }
+        fprintf(mult_report, "]\n");
+        #endif
+    }
+}
+
 void linear_algebra_bfs_scalar(graph g_h, int source)
 {
     /* define useful variables */

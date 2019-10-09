@@ -5,5 +5,6 @@
 
 void linear_algebra_bfs(graph g_h, int source);
 void linear_algebra_bfs_scalar(graph g_h, int source);
+void linear_algebra_bfs_vector(graph g_h, int source);
 
 #endif

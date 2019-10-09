@@ -148,29 +148,42 @@ __global__ void set_result (graph g_d, int * multiplier_d, int * working_array)
     }
 }
 
-__global__ void spmv_csr_vector_kernel (graph g_d, int * multiplier_d, int * working_array)
+__global__ void spmv_csr_vector_kernel (graph g_d, int * multiplier_d, int * working_array, int level)
 {
-    __shared__ int vals [];
+    extern __shared__ int vals[];
     int thread_id = blockDim.x * blockIdx.x + threadIdx.x ; // global thread index
-    int warp_id = thread_id / 32; // global warp index
-    int lane = thread_id & (32 - 1); // thread index within the warp
-    // one warp per row
+    int warp_id = thread_id / 32;                           // global warp index
+    int lane = thread_id & (32 - 1);                        // thread index within the warp
+    /* one warp per row */
     int row = warp_id ;
     if ( row < g_d.size ){
         int row_start = g_d.node_vector[row];
         int row_end = g_d.node_vector[row+1];
-        // compute running sum per thread
+        /* compute running sum per thread */
         vals[threadIdx.x] = 0;
         for (int edge_vector_index = row_start + lane ; edge_vector_index < row_end ; edge_vector_index += 32)
             vals [ threadIdx.x ] += multiplier_d[g_d.edge_vector[edge_vector_index]];
-            // parallel reduction in shared memory
+        /* parallel reduction in shared memory */
         if (lane < 16) vals[threadIdx.x] += vals[threadIdx.x + 16];
         if (lane <  8) vals[threadIdx.x] += vals[threadIdx.x +  8];
         if (lane <  4) vals[threadIdx.x] += vals[threadIdx.x +  4];
         if (lane <  2) vals[threadIdx.x] += vals[threadIdx.x +  2];
         if (lane <  1) vals[threadIdx.x] += vals[threadIdx.x +  1];
-        // first thread writes the result
-        if (lane == 0)
-            working_array[row] = vals[threadIdx.x];
+        /* first thread writes the result */
+        if (lane == 0){
+            int dot = vals[threadIdx.x];
+
+            if(dot != 0 && g_d.node_level_vector[row] == -1)
+                g_d.node_level_vector[row] = level;
+
+            #ifdef EXACT_MULT
+            working_array[row] = dot;
+            #else
+            if(dot != 0)
+                working_array[row] = 1;
+            else
+                working_array[row] = 0;
+            #endif
+        }
     }
 }
