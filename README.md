@@ -61,9 +61,9 @@ This Project uses separated modules to achieves its goal and here is the list of
  - `linear_algebra.cu` : contains linear algebra kernels
  - `linear_algebra_main.cu` : contains main function responsible of calling linear algebra kernels
  - `sequential.cpp` : contains all sequential implementations
- - `structures.cpp` : contains functions responsible of reading and processing graph structures if form of CSR
+ - `structures.cpp` : contains functions responsible of reading and processing graph structures in form of CSR
  - `desicion_maker.c` : decision making functions related to *Michela Becchi paper*
- - `fuzzy_timing.c` : timing modules (all function in this module except `gettimeofday` function provided by [_Amir Hossein Sojoodi_](https://github.com/amirsojoodi) at repository of [GPGPU-2018Fall](https://github.com/amirsojoodi/GPGPU-2018Fall) hosted on github. 
+ - `fuzzy_timing.c` : timing modules (all function in this module except `gettimeofday` function provided by [_Amir Hossein Sojoodi_](https://github.com/amirsojoodi) at repository of [GPGPU-2018Fall](https://github.com/amirsojoodi/GPGPU-2018Fall) hosted on github.)
  - `report.cpp` : this module is responsible of initialing report file and export different reports for validation and debug
  - `make.bat` : a batch file for compilation in windows
  - `Makefile` : make file for Linux based compilation
